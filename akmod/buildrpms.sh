@@ -68,7 +68,7 @@ getrepoinfo() { # Here we extract some information about the repository (if our 
         return 1
     fi
     if ! git config --get remote.origin.url &>/dev/null || ! git rev-parse HEAD &>/dev/null; then
-        printf '%s\n' "$(txtwarn): Unexpected error during repository owner or commit detection, automatic repository information unavilable."
+        printf '%s\n' "$(txtwarn): Unexpected error during repository owner or commit detection, automatic repository information unavailable."
         return 1
     fi
 
@@ -137,7 +137,7 @@ setupspecfiles() {
     printf "$(txtdone)\n"
 }
 
-buildrpms() { # We build the rpms and redirect the output to a file so it doesn't spam the command line, a non-fatal error would likely just dissapear in the wall of text anyway.
+buildrpms() { # We build the rpms and redirect the output to a file so it doesn't spam the command line, a non-fatal error would likely just disappear in the wall of text anyway.
     printf '%s\n' "$(txtstart): Building RPMs..."
     for specfile in "${specfiles[@]}"; do
         printf '%s' "Building ${txtitalic}$specfile${txtreset}... "
@@ -266,7 +266,7 @@ if [ ! $todo ] || [ $forcehelp ]; then
     printf '%s\n' "USAGE: buildrpms.sh (build, clean) [keeptmpdir, acpiworkaround, nocolors]"
     printf '%s\n' "EXAMPLE: ./akmod/buildrpms.sh clean"
     printf '%s\n' "EXAMPLE: ./akmod/buildrpms.sh build keeptmpdir"
-    printf '%s\n' "$(txtnote): Run the script with \"nocolors\" (or \"nc\") to disable special text appeareance (color, bold, italics, underline)."
+    printf '%s\n' "$(txtnote): Run the script with \"nocolors\" (or \"nc\") to disable special text appearance (color, bold, italics, underline)."
     pwdinfo
     if [ ! $forcehelp ]; then
         printf '%s\n' "$(txterror): No Instructions Supplied"; exit 1
