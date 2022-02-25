@@ -257,7 +257,7 @@ until [ ! $1 ]; do
             shift
         ;;
         *)
-            unkownargerror=true
+            unkownargerrors+=("${1}")
             shift
         ;;
     esac
@@ -265,8 +265,8 @@ done
 
 loadcolors
 
-if [ $unkownargerror ]; then # We aren't doing this inside the case statement as there we don't yet know if we can use colors.
-    printf '%s\n' "$(txterror): Unknown Argument \"${1}\""
+if [ $unkownargerrors ]; then # We aren't doing this inside the case statement as there we don't yet know if we can use colors.
+    printf '%s\n' "$(txterror): Unknown Argument$(plural unknownargerrors s) \"${1}\""
     exit 1
 fi
 
