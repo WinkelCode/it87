@@ -116,7 +116,7 @@ createsourcetarball() { # Here we create the tarball which will serve as our sou
     printf '%s\n' "$(txtstart): Creating Source Tarball..."
     mkdir -p ${randomtmpdir}/SOURCES/${project_name}
     for item in "${projectsources[@]}"; do
-        cp -a "$item" ${randomtmpdir}/SOURCES/${project_name}/"$item" || return 1
+        install -D -m 0644 "$item" ${randomtmpdir}/SOURCES/${project_name}/"$item" || return 1 # We use install to get around issues with files inside directories (seemed like the easiest solution)
     done
     (cd ${randomtmpdir}/SOURCES # The tar command can be really annoying in regards to the relation of the PWD to the folder to be archived, so we cd a subshell to it.
         tar -czvf ${project_name}.tar.gz ./${project_name}/ || exit 1 # Using "./" in case project_name was not defined for some reason, else we would archive the entire root!
