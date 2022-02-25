@@ -59,7 +59,7 @@ fi
 %files
 %doc README ISSUES
 %license LICENSE
-%{?addepmod:%{_prefix}/lib/depmod.d/%{project_name}.conf}
+%{?adddepmod:%{_prefix}/lib/depmod.d/%{project_name}.conf}
 %{?addmodload:%{_modulesloaddir}/%{project_name}.conf}
 %{?acpiworkaround:%{_modprobedir}/%{project_name}.conf}
 
