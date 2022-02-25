@@ -52,7 +52,7 @@ fi
 
 %install
 # Unlike with "_modprobedir", I was unable to find a macro for depmod.d, so we hardcode the path.
-%{?addepmod:install -D -m 0644 "depmod_%{project_name}.conf" "%{buildroot}/%{_prefix}/lib/depmod.d/%{project_name}.conf"}
+%{?adddepmod:install -D -m 0644 "depmod_%{project_name}.conf" "%{buildroot}/%{_prefix}/lib/depmod.d/%{project_name}.conf"}
 %{?addmodload:install -D -m 0644 "modload_%{project_name}.conf" "%{buildroot}/%{_modulesloaddir}/%{project_name}.conf"}
 %{?acpiworkaround:install -D -m 0644 "modprobe_%{project_name}.conf" "%{buildroot}/%{_modprobedir}/%{project_name}.conf"}
 
