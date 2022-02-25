@@ -37,6 +37,8 @@ Out-of-tree fork of the it87 kernel module with support for more chips. This is 
 %setup -q -c
 source_dirname=$(archivecontents=$(tar -tzf %{SOURCE0} | head -n 1); printf "${archivecontents:0:-1}")
 
+cp -a "${source_dirname}/"{LICENSE,README,docs} "./"
+
 %build
 if [ %{?adddepmod} ]; then
     printf '%s' "override %{project_name} * extra/%{project_name}" >"depmod_%{project_name}.conf"
@@ -55,8 +57,8 @@ fi
 %{?acpiworkaround:install -D -m 0644 "modprobe_%{project_name}.conf" "%{buildroot}/%{_modprobedir}/%{project_name}.conf"}
 
 %files
-%doc ${source_dirname}/README ${source_dirname}/docs/KNOWN_ISSUES
-%license ${source_dirname}/LICENSE
+%doc README docs/KNOWN_ISSUES
+%license LICENSE
 %{?adddepmod:%{_prefix}/lib/depmod.d/%{project_name}.conf}
 %{?addmodload:%{_modulesloaddir}/%{project_name}.conf}
 %{?acpiworkaround:%{_modprobedir}/%{project_name}.conf}
