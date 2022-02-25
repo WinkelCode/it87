@@ -115,8 +115,8 @@ fakesetuptree() { # The original rpmdev-setuptree can't be manipulated using --d
 createsourcetarball() { # Here we create the tarball which will serve as our source for the RPM build process.
     printf '%s\n' "$(txtstart): Creating Source Tarball..."
     mkdir -p ${randomtmpdir}/SOURCES/${project_name}
-    for file in "${projectsources[@]}"; do
-        cp -a "$file" ${randomtmpdir}/SOURCES/${project_name}/ || return 1
+    for item in "${projectsources[@]}"; do
+        cp -a "$item" ${randomtmpdir}/SOURCES/${project_name}/"$item" || return 1
     done
     (cd ${randomtmpdir}/SOURCES # The tar command can be really annoying in regards to the relation of the PWD to the folder to be archived, so we cd a subshell to it.
         tar -czvf ${project_name}.tar.gz ./${project_name}/ || exit 1 # Using "./" in case project_name was not defined for some reason, else we would archive the entire root!
