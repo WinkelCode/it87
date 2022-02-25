@@ -251,7 +251,7 @@ until [ ! $1 ]; do
         ;;
         *help|*usage)
             forcehelp=true
-            break
+            shift
         ;;
         *)
             printf '%s\n' "$(txterror): Unknown Argument \"${1}\""
@@ -266,7 +266,7 @@ if [ ! $todo ] || [ $forcehelp ]; then
     printf '%s\n' "USAGE: buildrpms.sh (build, clean) [keeptmpdir, acpiworkaround, nocolors]"
     printf '%s\n' "EXAMPLE: ./akmod/buildrpms.sh clean"
     printf '%s\n' "EXAMPLE: ./akmod/buildrpms.sh build keeptmpdir"
-    printf '%s\n' "$(txtnote): Run the script with \"nocolors\" (or \"nc\") to disable special text appearance (color, bold, italics, underline)."
+    printf '%s\n' "$(txtnote): Run the script with \"nocolors\" (or \"nc\") to disable special text appearance (color, bold, italic, underline)."
     pwdinfo
     if [ ! $forcehelp ]; then
         printf '%s\n' "$(txterror): No Instructions Supplied"; exit 1
