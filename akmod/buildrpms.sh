@@ -265,7 +265,7 @@ done
 
 loadcolors
 
-if [ $unkownargerrors ]; then # We aren't doing this inside the case statement as there we don't yet know if we can use colors.
+if [ $unknownargerrors ]; then # We aren't doing this inside the case statement as there we don't yet know if we can use colors.
     printf '%s\n' "$(txterror): Unknown Argument$(plural unknownargerrors s) \"${unknownargerrors[*]}\""
     exit 1
 fi
