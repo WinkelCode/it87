@@ -226,7 +226,10 @@ plural() { # Usage: plural (array) (plural) (singular), to be used with command 
         eval test "\${${1}[1]}" && printf '%s' "$2" || printf '%s' "$3"
 }
 
-# MAIN
+########
+# MAIN #
+########
+
 until [ ! $1 ]; do
     case $1 in
         clean)
@@ -254,13 +257,18 @@ until [ ! $1 ]; do
             shift
         ;;
         *)
-            printf '%s\n' "$(txterror): Unknown Argument \"${1}\""
-            exit 1
+            unkownargerror=true
+            shift
         ;;
     esac
 done
 
 loadcolors
+
+if [ $unkownargerror ]; then # We aren't doing this inside the case statement as there we don't yet know if we can use colors.
+    printf '%s\n' "$(txterror): Unknown Argument \"${1}\""
+    exit 1
+fi
 
 if [ ! $todo ] || [ $forcehelp ]; then
     printf '%s\n' "USAGE: buildrpms.sh (build, clean) [keeptmpdir, acpiworkaround, nocolors]"
