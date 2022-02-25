@@ -15,7 +15,7 @@ addoverride addmodload true
 
 dependencies=(spectool rpmbuild akmods)
 specfiles=(akmod/it87.spec akmod/it87-kmod.spec)
-projectsources=(compat.h it87.c LICENSE Makefile README ISSUES)
+projectsources=(compat.h it87.c LICENSE Makefile README docs/KNOWN_ISSUES)
 #rpmpattern=(akmod-${project_name} ${project_name} kmod-${project_name}) # Leftover from scrapped RPM auto-installer, telling the user to install via (rpm command) (install) (directory)* seems to work and is much less of a pain.
 
 ### Configuration End
@@ -115,13 +115,9 @@ fakesetuptree() { # The original rpmdev-setuptree can't be manipulated using --d
 createsourcetarball() { # Here we create the tarball which will serve as our source for the RPM build process.
     printf '%s\n' "$(txtstart): Creating Source Tarball..."
     mkdir -p ${randomtmpdir}/SOURCES/${project_name}
-    (shopt -s dotglob # So we can also see dotfiles if we need them.
-        for file in *; do
-            if [[ " ${projectsources[*]} " =~ " $file " ]]; then
-                cp -a "$file" ${randomtmpdir}/SOURCES/${project_name}/ || exit 1
-            fi
-        done
-    ) || return 1
+    for file in "${projectsources[@]}"; do
+        cp -a "$file" ${randomtmpdir}/SOURCES/${project_name}/ || return 1
+    done
     (cd ${randomtmpdir}/SOURCES # The tar command can be really annoying in regards to the relation of the PWD to the folder to be archived, so we cd a subshell to it.
         tar -czvf ${project_name}.tar.gz ./${project_name}/ || exit 1 # Using "./" in case project_name was not defined for some reason, else we would archive the entire root!
     ) || return 1
