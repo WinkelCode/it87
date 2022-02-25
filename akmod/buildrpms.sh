@@ -201,8 +201,10 @@ doaction() {
 }
 
 loadcolors() { # The color descriptions may not be accurate depending on the user's setup.
-    txtred=$(tput setaf 1); txtyellow=$(tput setaf 3); txtgreen=$(tput setaf 2); txtbold=$(tput bold); txtul=$(tput smul); txtitalic=$(tput sitm); txtreset=$(tput sgr0) # Bold, underline, and italics might not work, should still be fine though.
-    colora=$(tput setaf 5); colorb=$(tput setaf 6) # It seems these are particularly likely to vary.
+    if [ ! "$nocolors" ]; then
+        txtred=$(tput setaf 1); txtyellow=$(tput setaf 3); txtgreen=$(tput setaf 2); txtbold=$(tput bold); txtul=$(tput smul); txtitalic=$(tput sitm); txtreset=$(tput sgr0) # Bold, underline, and italics might not work, should still be fine though.
+        colora=$(tput setaf 5); colorb=$(tput setaf 6) # It seems these are particularly likely to vary.
+    fi
     txtok() { printf "${txtgreen}OK${txtreset}"; }
     txtwarn() { printf "${txtyellow}WARNING${txtreset}"; }    
     txterror() { printf "${txtred}ERROR${txtreset}"; }
@@ -225,9 +227,6 @@ plural() { # Usage: plural (array) (plural) (singular), to be used with command 
 }
 
 # MAIN
-
-loadcolors
-
 until [ ! $1 ]; do
     case $1 in
         clean)
@@ -246,6 +245,10 @@ until [ ! $1 ]; do
             addoverride acpiworkaround true
             shift
         ;;
+        *nc|*nocolors|*nocolours)
+            nocolors=true
+            shift
+        ;;
         *help|*usage)
             forcehelp=true
             break
@@ -257,10 +260,13 @@ until [ ! $1 ]; do
     esac
 done
 
+loadcolors
+
 if [ ! $todo ] || [ $forcehelp ]; then
-    printf '%s\n' "USAGE: buildrpms.sh (build, clean) [keeptmpdir, acpiworkaround]"
+    printf '%s\n' "USAGE: buildrpms.sh (build, clean) [keeptmpdir, acpiworkaround, nocolors]"
     printf '%s\n' "EXAMPLE: ./akmod/buildrpms.sh clean"
     printf '%s\n' "EXAMPLE: ./akmod/buildrpms.sh build keeptmpdir"
+    printf '%s\n' "$(txtnote): Run the script with \"nocolors\" (or \"nc\") if colored output is difficult to read on your screen"
     pwdinfo
     if [ ! $forcehelp ]; then
         printf '%s\n' "$(txterror): No Instructions Supplied"; exit 1
