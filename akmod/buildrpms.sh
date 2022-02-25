@@ -266,7 +266,7 @@ if [ ! $todo ] || [ $forcehelp ]; then
     printf '%s\n' "USAGE: buildrpms.sh (build, clean) [keeptmpdir, acpiworkaround, nocolors]"
     printf '%s\n' "EXAMPLE: ./akmod/buildrpms.sh clean"
     printf '%s\n' "EXAMPLE: ./akmod/buildrpms.sh build keeptmpdir"
-    printf '%s\n' "$(txtnote): Run the script with \"nocolors\" (or \"nc\") if colored output is difficult to read on your screen"
+    printf '%s\n' "$(txtnote): Run the script with \"nocolors\" (or \"nc\") to disable special text appeareance (color, bold, italics, underline)."
     pwdinfo
     if [ ! $forcehelp ]; then
         printf '%s\n' "$(txterror): No Instructions Supplied"; exit 1
