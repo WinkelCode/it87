@@ -1,7 +1,7 @@
 # Placeholder information, will be overridden by the wrapper script. Change it manually when specfiles are used directly.
-#%global project_name it87
-#%global repo_owner frankcrawford
-#%global repo_commit 77abcbe0c49d7d8dc4530dcf51cecb40ef39f49a
+#global project_name it87
+#global repo_owner frankcrawford
+#global repo_commit 77abcbe0c49d7d8dc4530dcf51cecb40ef39f49a
 #global addepmod true
 #global addmodload true
 #global acpiworkaround true
