@@ -57,7 +57,7 @@ fi
 %{?acpiworkaround:install -D -m 0644 "modprobe_%{project_name}.conf" "%{buildroot}/%{_modprobedir}/%{project_name}.conf"}
 
 %files
-%doc README ISSUES
+%doc README docs/KNOWN_ISSUES
 %license LICENSE
 %{?adddepmod:%{_prefix}/lib/depmod.d/%{project_name}.conf}
 %{?addmodload:%{_modulesloaddir}/%{project_name}.conf}
