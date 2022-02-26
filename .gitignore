@@ -7,5 +7,6 @@
 /Module.symvers
 /modules.order
 
+# Potential artifacts of the akmod/buildrpms.sh script
 /RPMS.*
 /rpmbuild.*
