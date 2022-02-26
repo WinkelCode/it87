@@ -96,7 +96,7 @@ tmpdircontrol() { # This function handles all things related to our tempdir (wit
         delete)
             if [ $keeptmpdir ]; then
                 printf '\n%s\n' "$(txtwarn): Not deleting \"${txtitalic}${randomtmpdir}${txtreset}\" as per \"keeptmpdir\"."
-                printf '%s\n\n' "$(txtnote): You can run \"${txtitalic}buildrpms.sh clean${txtreset}\" to delete build artifacts and preserved temporary build directories."
+                printf '%s\n' "$(txtnote): You can run \"${txtitalic}buildrpms.sh clean${txtreset}\" to delete build artifacts and preserved temporary build directories."
             else
                 printf '%s' "Deleting Temporary Build Directory: ${txtitalic}${randomtmpdir}${txtreset}... "
                 rm -rf "$randomtmpdir" || return 1

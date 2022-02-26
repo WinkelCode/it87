@@ -8,8 +8,6 @@
 # Placeholder information end
 
 %define commit_short() %{lua:print(string.sub(rpm.expand('%repo_commit'),1,arg[1]))}
-# We need to get the name of the first directory in the tarball, we could semi-hardcode based on the known pattern it but this is more flexible.
-%global source_dirname %(archivecontents=$(tar -tzf %{SOURCE0} | head -n 1) && printf '%s' "${archivecontents:0:-1}")
 %global debug_package %{nil}
 
 #__WRAPPEROVERRIDEMARKER__
@@ -36,6 +34,8 @@ Out-of-tree fork of the it87 kernel module with support for more chips. This is 
 %prep
 
 %setup -q -c
+# We need to get the name of the first directory in the tarball, we could semi-hardcode based on the known pattern it but this is more flexible.
+%global source_dirname %(archivecontents=$(tar -tzf %{SOURCE0} | head -n 1) && printf '%s' "${archivecontents:0:-1}")
 # Making sure we got our source_dirname as the macro/variable would be empty if the command failed.
 if [ ! "%{source_dirname}" ]; then echo "ERROR: RPM macro source_dirname is empty, missing or broken SOURCE0 tarball?"; exit 1; fi
 
