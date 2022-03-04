@@ -22,8 +22,8 @@ add() {
     fi
 
     mkdir -p "${srcdir}"
-    cp -r "./" "${srcdir}/"
-    cp "akms/AKMBUILD" "${srcdir}/"
+    cp "./" "${srcdir}/repo/"
+    cp "${srcdir}/repo/akms/AKMBUILD" "${srcdir}/"
     if [ $adddepmod ]; then
         printf '%s' "override ${project_name} * kernel/extra/akms" >"${srcdir}/depmod_${project_name}.conf"
         install -D -m 0644 "${srcdir}/depmod_${project_name}.conf" "/etc/depmod.d/akms_${project_name}.conf"
@@ -77,6 +77,7 @@ echo "$project_name akms (Alpine Kernel Module System) installation tool."
 
 if ! command -v akms &>/dev/null; then
     echo "ERROR: akms not found, try \"apk add akms\""
+    exit 1
 fi
 
 if ! apk info -e alpine-sdk &>/dev/null || ! apk info -e linux-lts-dev &>/dev/null; then
