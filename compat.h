@@ -65,4 +65,11 @@ u8 vid_which_vrm(void)
 }
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 0, 0)
+/*
+ * New API in 5.0
+ */
+#define kobj_to_dev(kobj)	container_of(kobj, struct device, kobj)
+#endif
+
 #endif /* COMPAT_H */
