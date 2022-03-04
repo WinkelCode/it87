@@ -37,22 +37,22 @@ Out-of-tree fork of the it87 kernel module with support for more chips. This is 
 if [ ! "%{source_dirname}" ]; then echo "ERROR: RPM macro source_dirname is empty, missing or broken SOURCE0 tarball?"; exit 1; fi
 
 for kernel_version in %{?kernel_versions}; do
-    cp -a "%{source_dirname}" "_kmod_build_${kernel_version%%___*}"
+	cp -a "%{source_dirname}" "_kmod_build_${kernel_version%%___*}"
 done
 
 %build
 for kernel_version in %{?kernel_versions}; do
-    (cd "_kmod_build_${kernel_version%%___*}/" &&
-    printf '%s' "%{repo_owner}-%{version}" >"VERSION" && # This isn't ideal, we should be sending our desired version to make directly, but I couldn't get it to work as the Makefile's instructions seem to take precedence.
-    # The VERSION file is only used if the .git folder wasn't copied (as with the build wrapper) and/or git isn't installed.
-    make %{?_smp_mflags} TARGET="${kernel_version%%___*}" modules &&
-    xz -f "%{project_name}.ko"
-    ) || exit 1
+	(cd "_kmod_build_${kernel_version%%___*}/" &&
+	printf '%s' "%{repo_owner}-%{version}" >"VERSION" && # This isn't ideal, we should be sending our desired version to make directly, but I couldn't get it to work as the Makefile's instructions seem to take precedence.
+	# The VERSION file is only used if the .git folder wasn't copied (as with the build wrapper) and/or git isn't installed.
+	make %{?_smp_mflags} TARGET="${kernel_version%%___*}" modules &&
+	xz -f "%{project_name}.ko"
+	) || exit 1
 done
 
 %install
 for kernel_version in %{?kernel_versions}; do
-    install -D -m 0755 "_kmod_build_${kernel_version%%___*}/%{project_name}.ko.xz" "%{buildroot}%{kmodinstdir_prefix}/${kernel_version%%___*}/%{kmodinstdir_postfix}/%{project_name}.ko.xz"
+	install -D -m 0755 "_kmod_build_${kernel_version%%___*}/%{project_name}.ko.xz" "%{buildroot}%{kmodinstdir_prefix}/${kernel_version%%___*}/%{kmodinstdir_postfix}/%{project_name}.ko.xz"
 done
 %{?akmod_install}
 

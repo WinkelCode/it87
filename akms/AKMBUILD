@@ -3,9 +3,9 @@ modver=0
 built_modules='it87.ko'
 
 build() {
-    for i in compat.h it87.c Makefile; do
-        cp "${srcdir}/repo/${i}" "${builddir}/"
-    done
-    if [ -d "${srcdir}/.git" ]; then cp -r "${srcdir}/.git" "${builddir}/"; fi
-    make $MAKEFLAGS modules
+	for i in compat.h it87.c Makefile; do
+		cp "${srcdir}/repo/${i}" "${builddir}/"
+	done
+	if [ -d "${srcdir}/.git" ]; then cp -r "${srcdir}/.git" "${builddir}/"; fi
+	make $MAKEFLAGS modules
 }

@@ -41,13 +41,13 @@ if [ ! "%{source_dirname}" ]; then echo "ERROR: RPM macro source_dirname is empt
 
 %build
 if [ %{?adddepmod} ]; then
-    printf '%s' "override %{project_name} * extra/%{project_name}" >"depmod_%{project_name}.conf"
+	printf '%s' "override %{project_name} * extra/%{project_name}" >"depmod_%{project_name}.conf"
 fi
 if [ %{?addmodload} ]; then
-    printf '%s' "%{project_name}" >"modload_%{project_name}.conf"
+	printf '%s' "%{project_name}" >"modload_%{project_name}.conf"
 fi
 if [ %{?acpiworkaround} ]; then
-    printf '%s' "options %{project_name} ignore_resource_conflict" >"modprobe_%{project_name}.conf"
+	printf '%s' "options %{project_name} ignore_resource_conflict" >"modprobe_%{project_name}.conf"
 fi
 
 %install
