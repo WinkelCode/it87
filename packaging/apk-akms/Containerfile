@@ -1,0 +1,9 @@
+FROM docker.io/library/alpine:latest
+
+# Install the build dependencies
+RUN apk add \
+	abuild \
+	build-base
+
+# Change to build directory
+WORKDIR /APKBUILD
