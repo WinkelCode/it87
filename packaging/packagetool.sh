@@ -86,7 +86,8 @@ build_rpm() {
 		"--mount type=bind,source=${temp_dir}/RPMS,target=/root/rpmbuild/RPMS"
 		"--mount type=bind,source=${temp_dir}/SRPMS,target=/root/rpmbuild/SRPMS"
 	)
-	${container_runtime} run --rm ${container_mounts[@]} ${software_name}-rpm-builder bash -c "rpmbuild -ba /root/rpmbuild/SPECS/*.spec" || { echo "Error: Failed to build RPMs"; exit 1; }
+	run_command="rpmbuild -ba /root/rpmbuild/SPECS/*.spec"
+	${container_runtime} run --rm ${container_mounts[@]} ${software_name}-rpm-builder bash -c "${run_command}" || { echo "Error: Failed to build RPMs"; exit 1; }
 	tree "${temp_dir}" 2>/dev/null || ls -R "${temp_dir}" # We print the contents of the temp dir for basic debugging
 	mkdir -p ".release/"{SRPMS,RPMS}
 	cp "${temp_dir}/SRPMS/"*.src.rpm ".release/SRPMS/"
