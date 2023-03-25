@@ -54,8 +54,7 @@ build_apk() {
 		"--mount type=bind,source=${temp_dir}/packages,target=/root/packages"
 	)
 	run_command="abuild-keygen -a -n && abuild -F checksum && abuild -F srcpkg && abuild -F"
-	${container_runtime} run --rm ${container_mounts[@]} ${software_name}-apk-builder ash -c "${run_command}" || { echo "Error: Failed to build APKs"; exit 1; }
-	tree "${temp_dir}" 2>/dev/null || ls -R "${temp_dir}"
+	${container_runtime} run --rm ${container_mounts[@]} ${software_name}-apk-builder ash -c "${run_command}" || { echo "Error: Container exited with non-zero status '$?'"; exit 1; }
 	mkdir -p ".release/"
 	cp "${temp_dir}/packages/"*/*.apk ".release/"
 }
@@ -79,7 +78,7 @@ build_rpm() {
 		cat "${spec_file}" >>"${spec_file_target}"
 	done
 	tar -czvf "${temp_dir}/SOURCES/${origin_name}.tar.gz" "../${PWD##*/}" # The spec files expect the sources in a subdirectory of the archive (as with GitHub tarballs)
-	echo "$(cat "./packaging/rpm-akmod/Containerfile")" | ${container_runtime} build -t ${software_name}-rpm-builder - # We pipe the Containerfile for Docker compatibility as it expects a "Dockerfile" file
+	echo "$(cat "./packaging/rpm-akmod/Containerfile")" | ${container_runtime} build -t ${software_name}-rpm-builder - # Piping in the Containerfile allows for Docker support since naming isn't an issue.
 	container_mounts=(
 		"--mount type=bind,source=${temp_dir}/SOURCES,target=/root/rpmbuild/SOURCES"
 		"--mount type=bind,source=${temp_dir}/SPECS,target=/root/rpmbuild/SPECS"
@@ -87,8 +86,7 @@ build_rpm() {
 		"--mount type=bind,source=${temp_dir}/SRPMS,target=/root/rpmbuild/SRPMS"
 	)
 	run_command="rpmbuild -ba /root/rpmbuild/SPECS/*.spec"
-	${container_runtime} run --rm ${container_mounts[@]} ${software_name}-rpm-builder bash -c "${run_command}" || { echo "Error: Failed to build RPMs"; exit 1; }
-	tree "${temp_dir}" 2>/dev/null || ls -R "${temp_dir}" # We print the contents of the temp dir for basic debugging
+	${container_runtime} run --rm ${container_mounts[@]} ${software_name}-rpm-builder bash -c "${run_command}" || { echo "Error: Container exited with non-zero status '$?'"; exit 1; }
 	mkdir -p ".release/"{SRPMS,RPMS}
 	cp "${temp_dir}/SRPMS/"*.src.rpm ".release/SRPMS/"
 	cp "${temp_dir}/RPMS/"*/*.rpm ".release/RPMS/"
@@ -98,14 +96,29 @@ build_generic_dkms() {
 	printf '%s\n' "NOT IMPLEMENTED YET"
 }
 
+startup() {
+	printf '%s\n' "Starting program..."
+	rm -rf ".release/" && printf '%s\n' "Deleted previous release directory." || { printf '%s\n' "Error: Failed to delete previous release directory."; exit 1; }
+	temp_dir="$(mktemp -t --directory ${software_name}_tmp.XXXXXXXXXX)" && printf '%s\n' "Created temporary directory '${temp_dir}'." || { printf '%s\n' "Error: Failed to create temporary directory."; exit 1; }
+	printf '%s\n' "Startup complete."
+}
+
+cleanup() {
+	printf '%s\n' "Cleaning up..."
+	printf '%s\n' "Listing contents of shared temp dir at '${temp_dir}':"
+	tree "${temp_dir}" 2>/dev/null || ls -R "${temp_dir}" || printf '%s\n' "Error: Failed to list contents of '${temp_dir}'."
+	printf '%s' "Deleting temporary directory '${temp_dir}'... "
+	rm -rf "${temp_dir}" && printf '%s\n' "OK." || { printf '%s\n' "Error: Failed to delete '${temp_dir}'."; exit 1; }
+	printf '%s\n' "Cleanup complete."
+}
+
 # Main
 # ----
 
 help="Usage: $0 [docker (experimental)|podman (recommended)] [apk|deb|rpm|tar]"
 
-rm -rf ".release" # Remove old output directory
-temp_dir="$(mktemp -t --directory ${software_name}_tmp.XXXXXXXXXX)"
-trap "rm -rf ${temp_dir}" EXIT # Remove temp dir on exit, uncomment for debugging
+startup
+trap cleanup EXIT
 
 case "$1" in
 	docker|d|dock)
@@ -153,4 +166,4 @@ case "$2" in
 		;;
 esac
 
-echo "Done."
+echo "Done."; exit 0
