@@ -60,7 +60,8 @@ build_apk() {
 }
 
 build_deb() {
-	printf '%s\n' "NOT IMPLEMENTED YET"
+	# The deb build process is less flexible than the others.
+	
 }
 
 build_rpm() {

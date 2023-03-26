@@ -1,0 +1,15 @@
+pkgname=${pkgname:-it87}
+pkgver=${pkgver:-0}
+source_modname=${source_modname:-it87}
+
+modname='${pkgname}'
+modver='${pkgver}'
+built_modules='${source_modname}.ko'
+
+build() {
+	for i in compat.h it87.c Makefile; do
+		cp "${srcdir}/repo/${i}" "${builddir}/"
+	done
+	if [ -d "${srcdir}/.git" ]; then cp -r "${srcdir}/.git" "${builddir}/"; fi
+	make $MAKEFLAGS modules
+}

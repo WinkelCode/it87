@@ -44,7 +44,7 @@ install -D -m 0644 "depmod_%{name}.conf" "%{buildroot}%{_prefix}/lib/depmod.d/%{
 install -D -m 0644 "modload_%{name}.conf" "%{buildroot}%{_prefix}/lib/modules-load.d/%{name}.conf"
 
 %files
-%doc %{source_dirname}/README %{source_dirname}/ISSUES
+%doc %{source_dirname}/README %{source_dirname}/ISSUES %{source_dirname}/packaging/generic-dkms/changelog
 %license %{source_dirname}/LICENSE
 %{_prefix}/lib/depmod.d/%{name}.conf
 %{_prefix}/lib/modules-load.d/%{name}.conf
