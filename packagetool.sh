@@ -9,7 +9,7 @@ print_usage() {
 	usage="$(cat <<EOF
 Usage: $0 [options]
 Options:
-	(Required) --runtime=RUNTIME
+	(Required) --container_runtime=CONTAINER_RUNTIME
 		Container runtime to use. Valid values are 'podman' and 'docker'.
 	(Required) --package_system=PACKAGE_SYSTEM
 		Package system to target. Valid values are 'apk', 'deb', 'rpm', and 'tarball'.
@@ -34,11 +34,11 @@ EOF
 parse_arguments() {
 	while [ "$1" ]; do
 		case "$1" in
-			--runtime=*)
-				runtime="${1#*=}"
-				valid_runtimes='(podman|docker)'
+			--container_runtime=*)
+				container_runtime="${1#*=}"
+				valid_container_runtimes='(podman|docker)'
 				if [[ ! "$runtime" =~ ^${valid_runtimes}$ ]]; then
-					printf '%s\n' "Error: Invalid runtime '$runtime', must be one of '$valid_runtimes'"
+					printf '%s\n' "Error: Invalid runtime '$container_runtime', must be one of '$valid_container_runtimes'"
 					exit 1
 				fi
 				shift
@@ -86,7 +86,7 @@ parse_arguments() {
 	done
 
 	required_options=(
-	"runtime"
+	"container_runtime"
 	"package_system"
 	)	
 
@@ -105,9 +105,9 @@ gather_repo_info() {
 	working_tree_changed="$(git diff-index --quiet HEAD -- &>/dev/null; printf '%s' "$?")" # Whether the working tree has been modified
 
 	if [ "$working_tree_changed" = '0' ]; then # If the working tree is clean, use the commit date. $working_tree_changed is also >0 if we're not a git repository.
-		timestamp="$(git show -s --format=%cd --date=iso-strict "${current_commit}" 2>/dev/null || printf 'unknown')"
+		working_tree_timestamp="$(git show -s --format=%cd --date=iso-strict "${current_commit}" 2>/dev/null || printf 'unknown')"
 	else # Otherwise, use the current date
-		timestamp="$(date --iso-8601=seconds)"
+		working_tree_timestamp="$(date --iso-8601=seconds)"
 	fi
 
 	origin_url="$(git remote get-url origin 2>/dev/null || printf 'unknown')" # URL of the origin remote
@@ -121,7 +121,7 @@ print_repo_info() {
 		"software_name" "$software_name" \
 		"current_commit" "$current_commit" \
 		"working_tree_changed" "$working_tree_changed" \
-		"timestamp" "$timestamp" \
+		"working_tree_timestamp" "$working_tree_timestamp" \
 		"origin_url" "$origin_url" \
 		"origin_name" "$origin_name" \
 		"origin_owner" "$origin_owner"
@@ -150,29 +150,25 @@ cleanup() {
 # Packaging functions
 # -------------------
 build_apk() {
-	mkdir -p "${temp_dir}/"{APKBUILD/src,packages}
+	mkdir -p "${temp_dir}/"{APKBUILD/src,packages} # Create the shared directories
 	build_overrides=(
 		"source_modname=\"${software_name}\""
 		"repo_name=\"${origin_name}\""
 		"repo_owner=\"${origin_owner}\""
-		"repo_commit=\"${current_commit}\""
-		"repo_commit_date=\"${timestamp}\""
-		"package_timestamp=\"${current_date}\""
+		"package_timestamp=\"$(date --date="${working_tree_timestamp}" +%Y%m%d)\""
+		"source=\"${origin_name}.tar.gz\""
 	)
-	for build_file in "./packaging/apk-akms/"{APKBUILD,AKMBUILD}; do
-		build_file_target="${temp_dir}/APKBUILD/${build_file##*/}"
-		printf '%s\n' "${build_overrides[@]}" >"${build_file_target}"
-		cat "${build_file}" >>"${build_file_target}"
-	done
-	tar -czvf "${temp_dir}/APKBUILD/${origin_name}.tar.gz" "../${PWD##*/}"
-	echo "$(cat "./alpine/Containerfile")" | ${container_runtime} build -t ${software_name}-apk-builder -
+	printf '%s\n' "${build_overrides[@]}" >"${temp_dir}/APKBUILD/APKBUILD" # Write overrides
+	cat "./alpine/APKBUILD" >>"${temp_dir}/APKBUILD/APKBUILD" # Append the APKBUILD
+	tar -czvf "${temp_dir}/APKBUILD/${origin_name}.tar.gz" "../${PWD##*/}" # Create the source tarball, for compatibility with GitHub tarballs we put the repo in a subdirectory of the tarball
+	echo "$(cat "./alpine/Containerfile")" | ${container_runtime} build -t ${software_name}-apk-builder - # Piping the Containerfile allows for easy compatibility with both Docker and Podman
 	container_mounts=(
 		"--mount type=bind,source=${temp_dir}/APKBUILD,target=/APKBUILD"
 		"--mount type=bind,source=${temp_dir}/packages,target=/root/packages"
 	)
 	run_command="abuild-keygen -a -n && abuild -F checksum && abuild -F srcpkg && abuild -F"
 	${container_runtime} run --rm ${container_mounts[@]} ${software_name}-apk-builder ash -c "${run_command}" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
-	mkdir -p ".release/"
+	mkdir -p ".release/" # Copy out the built packages
 	cp "${temp_dir}/packages/"*/*.apk ".release/"
 }
 
@@ -183,7 +179,7 @@ build_rpm() {
 		"%global repo_name ${origin_name}"
 		"%global repo_owner ${origin_owner}"
 		"%global repo_commit ${current_commit}"
-		"%global package_timestamp ${current_date}"
+		"%global package_working_tree_timestamp ${current_date}"
 	)
 	for spec_file in "./packaging/rpm-akmod/"*.spec; do # Write overrides, then insert the original spec file
 		spec_file_target="${temp_dir}/SPECS/${spec_file##*/}"
@@ -224,4 +220,24 @@ parse_arguments "$@"
 
 startup
 print_repo_info
+
+case "$package_system" in
+	apk)
+		build_apk
+		;;
+	rpm)
+		build_rpm
+		;;
+	deb)
+		build_deb
+		;;
+	tarball)
+		build_tarball
+		;;
+	*)
+		printf '%s\n' "Error: Unknown package system '$package_system'" # This should never happen since the argument parser validates the input
+		exit 1
+		;;
+esac
+
 exit 0

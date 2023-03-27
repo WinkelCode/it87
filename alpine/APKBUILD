@@ -2,15 +2,12 @@
 source_modname=${source_modname:-"it87"}
 repo_name=${repo_name:-"it87"}
 repo_owner=${repo_owner:-"frankcrawford"}
-repo_commit=${repo_commit:-"77abcbe0c49d7d8dc4530dcf51cecb40ef39f49a"}
-repo_commit_date=${repo_commit_date:-"2021-11-14"}
 package_timestamp=${package_timestamp:-"$(date +%Y%m%d)"}
+# ${source:-} is expanded later in the script
 
-# If anyone is still using this the year 10,000, just change this to $(date -d ${repo_commit_date} +%Y%m%d) and save the person in 100,000 the trouble.
-repo_commit_date_dashless="${repo_commit_date:0:4}${repo_commit_date:5:2}${repo_commit_date:8:2}"
 
 pkgname="${source_modname}-oot"
-pkgver=0_git${repo_commit_date_dashless}
+pkgver=0_git${package_timestamp}
 pkgrel=1
 pkgdesc="Userland package for the out-of-tree version of the \"${source_modname}\" module forked by \"${repo_owner}\""
 url="https://github.com/${repo_owner}/${repo_name}"
@@ -20,14 +17,14 @@ subpackages="
 	${pkgname}-akms:akms:x86_64
 	${pkgname}-doc:doc:noarch
 	${pkgname}-ignore_resource_conflict:ignore_resource_conflict:noarch"
-# source="${url}/tarball/${repo_commit}/${repo_name}.tar.gz" # Remote source
-source="${repo_name}.tar.gz" # Local source
+source=${source:-"${url}/tarball/${repo_commit}/${repo_name}.tar.gz"}
 options="!check"
 
 for i in "${PWD}" "${srcdir}"; do # Find where our tarball is, emulating RPM's SOURCE0 variable
 	[ -f "${i}/${repo_name}.tar.gz" ] && source0="${i}/${repo_name}.tar.gz"
 done
 source_dirname="$(tar -tzf "${source0}" | head -n 1 | head -c -2)" # Get the name of the dir inside the tarball dynamically
+
 
 prepare() {
 	default_prepare
@@ -41,20 +38,12 @@ build() {
 	printf '%s' "${source_modname}" >"${builddir}/modload_${pkgname}.conf"
 	printf '%s' "options ${source_modname} ignore_resource_conflict" >"${builddir}/modprobe_${pkgname}.conf"
 
-	cat >"${builddir}/akmbuild_${pkgname}" <<EOF
-modname='${pkgname}'
-modver='${pkgver}'
-built_modules='${source_modname}.ko'
-
-build() {
-	for i in compat.h it87.c Makefile; do
-		cp "\${srcdir}/repo/\${i}" "\${builddir}/"
-	done
-	if [ -d "\${srcdir}/.git" ]; then cp -r "\${srcdir}/.git" "\${builddir}/"; fi
-	make \$MAKEFLAGS modules
-}
-EOF
-
+	printf '%s\n' \
+		"modname='${pkgname}'" \
+		"modver='${pkgver}'" \
+		"built_modules='${source_modname}.ko'" \
+		>"${builddir}/akmbuild_${pkgname}"
+	cat "${srcdir}/${source_dirname}/akms/AKMBUILD" >>"${builddir}/akmbuild_${pkgname}"
 }
 
 package() {
@@ -66,6 +55,7 @@ package() {
 	install -D -m 0644 "${srcdir}/${source_dirname}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 	install -D -m 0644 "${srcdir}/${source_dirname}/README" "${pkgdir}/usr/share/doc/${pkgname}/README"
 	install -D -m 0644 "${srcdir}/${source_dirname}/ISSUES" "${pkgdir}/usr/share/doc/${pkgname}/ISSUES"
+	install -D -m 0644 "${srcdir}/${source_dirname}/debian/changelog" "${pkgdir}/usr/share/doc/${pkgname}/changelog"
 	cp -r "${srcdir}/${source_dirname}/Research" "${pkgdir}/usr/share/doc/${pkgname}/Research"
 	cp -r "${srcdir}/${source_dirname}/Sensors configs" "${pkgdir}/usr/share/doc/${pkgname}/Sensors configs"
 	chmod -R 0644 "${pkgdir}/usr/share/doc/${pkgname}/Research"
@@ -85,6 +75,7 @@ akms() {
 }
 
 ignore_resource_conflict() {
+	pkgdesc="Optional "modprobe.d" entry for the "${source_modname}" module to ignore ACPI resource conflicts."
 	install -D -m 0644 "${builddir}/modprobe_${pkgname}.conf" "${subpkgdir}/etc/modprobe.d/${pkgname}.conf"
 }
 

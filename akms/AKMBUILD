@@ -1,10 +1,6 @@
-pkgname=${pkgname:-it87}
-pkgver=${pkgver:-0}
-source_modname=${source_modname:-it87}
-
-modname='${pkgname}'
-modver='${pkgver}'
-built_modules='${source_modname}.ko'
+modname=${modname:-it87}
+modver=${modver:-0_git$(date +%Y%m%d)}
+built_modules=${built_modules:-it87.ko}
 
 build() {
 	for i in compat.h it87.c Makefile; do
