@@ -1,5 +1,5 @@
 # Placeholder information will be used if not inserted above (e.g. by a build wrapper)
-%{!?source_modname: %global source_modname it87} # Module name as it appears in the source code
+%{!?source_modname: %global source_modname it87}
 %{!?repo_name: %global repo_name it87}
 %{!?repo_owner: %global repo_owner frankcrawford}
 %{!?repo_commit: %global repo_commit 77abcbe0c49d7d8dc4530dcf51cecb40ef39f49a}

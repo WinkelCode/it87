@@ -1,5 +1,5 @@
 # Placeholder information will be used if not inserted above (e.g. by a build wrapper)
-%{!?source_modname: %global source_modname it87} # Module name as it appears in the source code
+%{!?source_modname: %global source_modname it87}
 %{!?package_timestamp:%global package_timestamp %{lua:print(os.date('!%Y%m%d'))}}
 # Placeholder information end
 
@@ -23,7 +23,7 @@ Package to ignore resource conflicts for the %{source_modname} kernel module.
 %setup -q -c -T
 
 %build
-printf '%s' "options %{source_modname} ignore_resource_conflict" >"modprobe_%{name}.conf"
+printf '%s\n' "options %{source_modname} ignore_resource_conflict" >"modprobe_%{name}.conf"
 
 %install
 install -D -m 0644 "modprobe_%{name}.conf" "%{buildroot}%{_prefix}/lib/modprobe.d/%{name}.conf"
