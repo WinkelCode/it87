@@ -3,6 +3,7 @@ modver=${modver:-0_git$(date +%Y%m%d)}
 built_modules=${built_modules:-it87.ko}
 
 build() {
+	# TODO require packages
 	for i in compat.h it87.c Makefile; do
 		cp "${srcdir}/repo/${i}" "${builddir}/"
 	done

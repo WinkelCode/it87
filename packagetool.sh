@@ -177,7 +177,7 @@ build_apk() {
 		"--mount type=bind,source=${temp_dir}/APKBUILD,target=/APKBUILD"
 		"--mount type=bind,source=${temp_dir}/packages,target=/root/packages"
 	)
-	run_command="abuild-keygen -a -n && abuild -F checksum && abuild -F srcpkg && abuild -F"
+	run_command="abuild-keygen -a -n && abuild -F checksum && abuild -F srcpkg && abuild -F" # We can't not sign the packge, so we use a throwaway key
 	${container_runtime} run --rm ${container_mounts[@]} ${software_name}-apk-builder ash -c "${run_command}" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
 	mkdir -p ".release/" # Copy out the built packages
 	cp "${temp_dir}/packages/"*/*.apk ".release/"
