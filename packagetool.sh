@@ -24,6 +24,7 @@ Options:
 		'none' is the default and prints nothing.
 		'normal' uses 'tree' or 'ls -R' to print the contents of the temporary directory.
 		'verbose' uses 'ls -laR' to print the contents of the temporary directory.
+		--print_temp_dir is equivalent to --print_temp_dir=normal.
 	(Optional) --help, -h
 		Print this help message and exit.
 EOF
@@ -71,6 +72,10 @@ parse_arguments() {
 					printf '%s\n' "Error: Invalid print_temp_dir '$print_temp_dir', must be one of '$valid_print_temp_dir'"
 					exit 1
 				fi
+				shift
+				;;
+			--print_temp_dir)
+				print_temp_dir='normal'
 				shift
 				;;
 			--help|-h)
@@ -136,13 +141,19 @@ startup() {
 
 cleanup() {
 	if [ "$print_temp_dir" == 'normal' ]; then
+		printf '%s\n' "Contents of temporary directory at '${temp_dir}' ('normal' verbosity):"
 		tree "${temp_dir}" 2>/dev/null || ls -R "${temp_dir}"
 	elif [ "$print_temp_dir" == 'verbose' ]; then
+		printf '%s\n' "Contents of temporary directory at '${temp_dir}' ('verbose' verbosity):"
 		ls -laR "${temp_dir}"
 	fi
-	printf '%s' "Deleting temporary directory at '${temp_dir}'..."
-	rm -rf "${temp_dir}" || { printf '\n%s\n' "Error: Failed to delete temporary directory."; exit 1; }
-	printf '%s\n' " OK."
+	if [ "$keep_temp_dir" == 'true' ]; then
+		printf '%s\n' "Not removing '${temp_dir}' as per '--keep_temp_dir'."
+	else 
+		printf '%s' "Deleting temporary directory at '${temp_dir}'..."
+		rm -rf "${temp_dir}" || { printf '\n%s\n' "Error: Failed to delete temporary directory."; exit 1; }
+		printf '%s\n' " OK."
+	fi
 }
 
 
@@ -161,7 +172,7 @@ build_apk() {
 	printf '%s\n' "${build_overrides[@]}" >"${temp_dir}/APKBUILD/APKBUILD" # Write overrides
 	cat "./alpine/APKBUILD" >>"${temp_dir}/APKBUILD/APKBUILD" # Append the APKBUILD
 	tar -czvf "${temp_dir}/APKBUILD/${origin_name}.tar.gz" "../${PWD##*/}" # Create the source tarball, for compatibility with GitHub tarballs we put the repo in a subdirectory of the tarball
-	echo "$(cat "./alpine/Containerfile")" | ${container_runtime} build -t ${software_name}-apk-builder - # Piping the Containerfile allows for easy compatibility with both Docker and Podman
+	cat "./alpine/Containerfile" | ${container_runtime} build -t ${software_name}-apk-builder - # Piping the Containerfile allows for easy compatibility with both Docker and Podman
 	container_mounts=(
 		"--mount type=bind,source=${temp_dir}/APKBUILD,target=/APKBUILD"
 		"--mount type=bind,source=${temp_dir}/packages,target=/root/packages"
@@ -181,13 +192,13 @@ build_rpm() {
 		"%global repo_commit ${current_commit}"
 		"%global package_working_tree_timestamp ${current_date}"
 	)
-	for spec_file in "./packaging/rpm-akmod/"*.spec; do # Write overrides, then insert the original spec file
+	for spec_file in "./redhat/"*.spec; do # Write overrides, then insert the original spec file
 		spec_file_target="${temp_dir}/SPECS/${spec_file##*/}"
 		printf '%s\n' "${spec_overrides[@]}" >"${spec_file_target}"
 		cat "${spec_file}" >>"${spec_file_target}"
 	done
 	tar -czvf "${temp_dir}/SOURCES/${origin_name}.tar.gz" "../${PWD##*/}" # The spec files expect the sources in a subdirectory of the archive (as with GitHub tarballs)
-	echo "$(cat "./redhat/Containerfile")" | ${container_runtime} build -t ${software_name}-rpm-builder - # Piping in the Containerfile allows for Docker support since naming isn't an issue.
+	cat "./redhat/Containerfile" | ${container_runtime} build -t ${software_name}-rpm-builder - # Piping in the Containerfile allows for Docker support since naming isn't an issue.
 	container_mounts=(
 		"--mount type=bind,source=${temp_dir}/SOURCES,target=/root/rpmbuild/SOURCES"
 		"--mount type=bind,source=${temp_dir}/SPECS,target=/root/rpmbuild/SPECS"
@@ -202,8 +213,14 @@ build_rpm() {
 }
 
 build_deb() {
-	# The deb build process is less flexible than the others.
-	echo "Test"
+	cp -r "../${PWD##*/}" "${temp_dir}/"
+	# Debug, interactive shell with Containerfile
+	cat "./debian/Containerfile" | ${container_runtime} build -t ${software_name}-deb-builder -
+	container_mounts=(
+		"--mount type=bind,source=${temp_dir}/,target=/root"
+	)
+	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-deb-builder bash -c 'cd /root && bash'
+	exit 1
 }
 
 build_tarball() {
@@ -216,7 +233,7 @@ build_tarball() {
 # ----
 gather_repo_info
 parse_arguments "$@"
-[ ! "$keep_temp_dir" ] && trap cleanup EXIT
+trap cleanup EXIT
 
 startup
 print_repo_info
