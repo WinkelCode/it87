@@ -190,7 +190,7 @@ build_rpm() {
 		"%global repo_name ${origin_name}"
 		"%global repo_owner ${origin_owner}"
 		"%global repo_commit ${current_commit}"
-		"%global package_working_tree_timestamp ${current_date}"
+		"%global package_timestamp $(date --date="${working_tree_timestamp}" +%Y%m%d)"
 	)
 	for spec_file in "./redhat/"*.spec; do # Write overrides, then insert the original spec file
 		spec_file_target="${temp_dir}/SPECS/${spec_file##*/}"
@@ -213,14 +213,15 @@ build_rpm() {
 }
 
 build_deb() {
-	cp -r "../${PWD##*/}" "${temp_dir}/"
-	# Debug, interactive shell with Containerfile
+	cp -r "../${PWD##*/}" "${temp_dir}/${software_name}"
 	cat "./debian/Containerfile" | ${container_runtime} build -t ${software_name}-deb-builder -
 	container_mounts=(
 		"--mount type=bind,source=${temp_dir}/,target=/root"
 	)
-	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-deb-builder bash -c 'cd /root && bash'
-	exit 1
+	run_command="cd /root/${software_name} && dpkg-buildpackage --no-sign"
+	${container_runtime} run --rm ${container_mounts[@]} ${software_name}-deb-builder bash -c "${run_command}" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
+	mkdir -p ".release/"
+	cp "${temp_dir}/"*.deb ".release/"
 }
 
 build_tarball() {
