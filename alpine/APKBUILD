@@ -34,14 +34,15 @@ prepare() {
 }
 
 build() {
-	printf '%s' "override ${source_modname} * akms" >"${builddir}/depmod_${pkgname}.conf"
-	printf '%s' "${source_modname}" >"${builddir}/modload_${pkgname}.conf"
-	printf '%s' "options ${source_modname} ignore_resource_conflict" >"${builddir}/modprobe_${pkgname}.conf"
+	printf '%s\n' "override ${source_modname} * akms" >"${builddir}/depmod_${pkgname}.conf"
+	printf '%s\n' "${source_modname}" >"${builddir}/modload_${pkgname}.conf"
+	printf '%s\n' "options ${source_modname} ignore_resource_conflict" >"${builddir}/modprobe_${pkgname}.conf"
 
 	printf '%s\n' \
 		"modname='${pkgname}'" \
 		"modver='${pkgver}'" \
 		"built_modules='${source_modname}.ko'" \
+		"versioning='VERSION'" \
 		>"${builddir}/akmbuild_${pkgname}"
 	cat "${srcdir}/${source_dirname}/akms/AKMBUILD" >>"${builddir}/akmbuild_${pkgname}"
 }
