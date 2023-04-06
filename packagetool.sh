@@ -15,6 +15,8 @@ Options:
 		Package system to target. Valid values are 'apk', 'deb', 'rpm', and 'tarball'.
 	(Optional) --software_name=SOFTWARE_NAME
 		Name of the software to package. Defaults to the name of the current directory ('${PWD##*/}').
+	(Optional) --no_pkg_tests
+		Do not test installation and dynamic build of the package.
 	(Optional) --print_repo_info
 		Print information about the current repository and exit.
 	(Optional) --keep_temp_dir
@@ -55,6 +57,10 @@ parse_arguments() {
 				;;
 			--software_name=*)
 				software_name="${1#*=}"
+				shift
+				;;
+			--no_pkg_tests)
+				no_pkg_tests='true'
 				shift
 				;;
 			--print_repo_info)
@@ -190,7 +196,10 @@ EOF
 		"--mount type=bind,source=${temp_dir}/packages,target=/root/packages"
 	)
 	run_command="abuild-keygen -a -n && abuild -F checksum && abuild -F srcpkg && abuild -F" # We can't not sign the packge, so we use a throwaway key
-	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-apk-builder ash -c "${run_command}; ash" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
+	if [ ! "$no_pkg_tests" ]; then
+		run_command="${run_command}; ash"
+	fi
+	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-apk-builder ash -c "${run_command}" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
 	mkdir -p ".release/" # Copy out the built packages
 	cp "${temp_dir}/packages/"*/*.apk ".release/"
 }
@@ -230,7 +239,10 @@ EOF
 		"--mount type=bind,source=${temp_dir}/SRPMS,target=/root/rpmbuild/SRPMS"
 	)
 	run_command="rpmbuild -ba /root/rpmbuild/SPECS/*.spec"
-	${container_runtime} run --rm ${container_mounts[@]} ${software_name}-rpm-builder bash -c "${run_command}" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
+	if [ ! "$no_pkg_tests" ]; then
+		run_command="${run_command}; printf '%s\n' 'TODO'"
+	fi
+	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-rpm-builder bash -c "${run_command}" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
 	mkdir -p ".release/"{SRPMS,RPMS}
 	cp "${temp_dir}/SRPMS/"*.src.rpm ".release/SRPMS/"
 	cp "${temp_dir}/RPMS/"*/*.rpm ".release/RPMS/"
@@ -251,7 +263,10 @@ EOF
 		"--mount type=bind,source=${temp_dir}/,target=/root"
 	)
 	run_command="cd /root/${software_name} && dpkg-buildpackage --no-sign"
-	${container_runtime} run --rm ${container_mounts[@]} ${software_name}-deb-builder bash -c "${run_command}" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
+	if [ ! "$no_pkg_tests" ]; then
+		run_command="${run_command}; printf '%s\n' 'TODO'"
+	fi
+	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-deb-builder bash -c "${run_command}" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
 	mkdir -p ".release/"
 	cp "${temp_dir}/"*.deb ".release/"
 }
@@ -290,4 +305,4 @@ case "$package_system" in
 		;;
 esac
 
-exit 0
+echo "Program completed successfully"; exit 0
