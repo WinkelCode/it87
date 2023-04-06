@@ -48,7 +48,7 @@ build() {
 }
 
 package() {
-	depends="${pkgname}-src" # Userland and src (AKMBUILD) packages depend on each other
+	depends="${pkgname}-akms" # Userland and src (AKMBUILD) packages depend on each other
 	# Apparently Alpine only reads these files from /etc/, not the corresponding /usr/ locations
 	install -D -m 0644 "${builddir}/depmod_${pkgname}.conf" "${pkgdir}/etc/depmod.d/${pkgname}.conf"
 	install -D -m 0644 "${builddir}/modload_${pkgname}.conf" "${pkgdir}/etc/modules-load.d/${pkgname}.conf"

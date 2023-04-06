@@ -1,9 +1,0 @@
-FROM registry.fedoraproject.org/fedora-minimal:latest
-
-# Install the build dependencies
-RUN microdnf install -y \
-	rpmdevtools \
-	kmodtool
-
-# Create the rpmbuild directory structure
-RUN rpmdev-setuptree

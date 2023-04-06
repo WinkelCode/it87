@@ -38,7 +38,7 @@ parse_arguments() {
 			--container_runtime=*)
 				container_runtime="${1#*=}"
 				valid_container_runtimes='(podman|docker)'
-				if [[ ! "$runtime" =~ ^${valid_runtimes}$ ]]; then
+				if [[ ! "$container_runtime" =~ ^${valid_container_runtimes}$ ]]; then
 					printf '%s\n' "Error: Invalid runtime '$container_runtime', must be one of '$valid_container_runtimes'"
 					exit 1
 				fi
@@ -161,6 +161,18 @@ cleanup() {
 # Packaging functions
 # -------------------
 build_apk() {
+	containerfile=$(cat <<EOF
+FROM docker.io/library/alpine:latest
+
+# Install the build dependencies
+RUN apk add \
+	abuild \
+	build-base
+
+# Change to build directory
+WORKDIR /APKBUILD
+EOF
+)
 	mkdir -p "${temp_dir}/"{APKBUILD/src,packages} # Create the shared directories
 	build_overrides=(
 		"source_modname=\"${software_name}\""
@@ -172,18 +184,30 @@ build_apk() {
 	printf '%s\n' "${build_overrides[@]}" >"${temp_dir}/APKBUILD/APKBUILD" # Write overrides
 	cat "./alpine/APKBUILD" >>"${temp_dir}/APKBUILD/APKBUILD" # Append the APKBUILD
 	tar -czvf "${temp_dir}/APKBUILD/${origin_name}.tar.gz" "../${PWD##*/}" # Create the source tarball, for compatibility with GitHub tarballs we put the repo in a subdirectory of the tarball
-	cat "./alpine/Containerfile" | ${container_runtime} build -t ${software_name}-apk-builder - # Piping the Containerfile allows for easy compatibility with both Docker and Podman
+	printf '%s\n' "${containerfile}" | ${container_runtime} build -t ${software_name}-apk-builder -f - # Build the container
 	container_mounts=(
 		"--mount type=bind,source=${temp_dir}/APKBUILD,target=/APKBUILD"
 		"--mount type=bind,source=${temp_dir}/packages,target=/root/packages"
 	)
 	run_command="abuild-keygen -a -n && abuild -F checksum && abuild -F srcpkg && abuild -F" # We can't not sign the packge, so we use a throwaway key
-	${container_runtime} run --rm ${container_mounts[@]} ${software_name}-apk-builder ash -c "${run_command}" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
+	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-apk-builder ash -c "${run_command}; ash" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
 	mkdir -p ".release/" # Copy out the built packages
 	cp "${temp_dir}/packages/"*/*.apk ".release/"
 }
 
 build_rpm() {
+	containerfile=$(cat <<EOF
+FROM registry.fedoraproject.org/fedora-minimal:latest
+
+# Install the build dependencies
+RUN microdnf install -y \
+	rpmdevtools \
+	kmodtool
+
+# Create the rpmbuild directory structure
+RUN rpmdev-setuptree
+EOF
+)
 	mkdir -p "${temp_dir}/"{SOURCES,SPECS,RPMS,SRPMS} # Create shared build directories in temp dir
 	spec_overrides=(
 		"%global source_modname ${software_name}"
@@ -198,7 +222,7 @@ build_rpm() {
 		cat "${spec_file}" >>"${spec_file_target}"
 	done
 	tar -czvf "${temp_dir}/SOURCES/${origin_name}.tar.gz" "../${PWD##*/}" # The spec files expect the sources in a subdirectory of the archive (as with GitHub tarballs)
-	cat "./redhat/Containerfile" | ${container_runtime} build -t ${software_name}-rpm-builder - # Piping in the Containerfile allows for Docker support since naming isn't an issue.
+	printf '%s\n' "${containerfile}" | ${container_runtime} build -t ${software_name}-rpm-builder -f - # Build the container
 	container_mounts=(
 		"--mount type=bind,source=${temp_dir}/SOURCES,target=/root/rpmbuild/SOURCES"
 		"--mount type=bind,source=${temp_dir}/SPECS,target=/root/rpmbuild/SPECS"
@@ -213,8 +237,16 @@ build_rpm() {
 }
 
 build_deb() {
+	containerfile=$(cat <<EOF
+FROM docker.io/library/debian:stable-slim
+
+RUN apt-get update && apt-get install -y \
+	debhelper \
+	dkms
+EOF
+)
 	cp -r "../${PWD##*/}" "${temp_dir}/${software_name}"
-	cat "./debian/Containerfile" | ${container_runtime} build -t ${software_name}-deb-builder -
+	printf '%s\n' "${containerfile}" | ${container_runtime} build -t ${software_name}-deb-builder -f -
 	container_mounts=(
 		"--mount type=bind,source=${temp_dir}/,target=/root"
 	)
