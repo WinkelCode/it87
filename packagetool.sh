@@ -161,7 +161,7 @@ cleanup() {
 # Packaging functions
 # -------------------
 build_apk() {
-	containerfile=$(cat <<EOF
+	containerfile=$(cat <<'EOF'
 FROM docker.io/library/alpine:latest
 
 # Install the build dependencies
@@ -196,7 +196,7 @@ EOF
 }
 
 build_rpm() {
-	containerfile=$(cat <<EOF
+	containerfile=$(cat <<'EOF'
 FROM registry.fedoraproject.org/fedora-minimal:latest
 
 # Install the build dependencies
@@ -237,7 +237,7 @@ EOF
 }
 
 build_deb() {
-	containerfile=$(cat <<EOF
+	containerfile=$(cat <<'EOF'
 FROM docker.io/library/debian:stable-slim
 
 RUN apt-get update && apt-get install -y \
