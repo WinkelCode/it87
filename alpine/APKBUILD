@@ -42,9 +42,8 @@ build() {
 		"modname='${pkgname}'" \
 		"modver='${pkgver}'" \
 		"built_modules='${source_modname}.ko'" \
-		"versioning='VERSION'" \
 		>"${builddir}/akmbuild_${pkgname}"
-	cat "${srcdir}/${source_dirname}/akms/AKMBUILD" >>"${builddir}/akmbuild_${pkgname}"
+	cat "${srcdir}/${source_dirname}/alpine/AKMBUILD" >>"${builddir}/akmbuild_${pkgname}"
 }
 
 package() {

@@ -17,6 +17,9 @@ Options:
 		Name of the software to package. Defaults to the name of the current directory ('${PWD##*/}').
 	(Optional) --no_pkg_tests
 		Do not test installation and dynamic build of the package.
+	(Optional) --inspect_container
+		Inspect the container with a shell after building (and testing) the package.
+		Note: 'exit'-ing the container with a non-zero exit code will stop the script as well.
 	(Optional) --print_repo_info
 		Print information about the current repository and exit.
 	(Optional) --keep_temp_dir
@@ -61,6 +64,10 @@ parse_arguments() {
 				;;
 			--no_pkg_tests)
 				no_pkg_tests='true'
+				shift
+				;;
+			--inspect_container)
+				inspect_container='true'
 				shift
 				;;
 			--print_repo_info)
@@ -173,7 +180,11 @@ FROM docker.io/library/alpine:latest
 # Install the build dependencies
 RUN apk add \
 	abuild \
-	build-base
+	build-base \
+	linux-lts-dev
+
+# Save kernel dev name
+RUN printf '%s\n' "$(ls /lib/modules/ | head -n 1)" >/kernel_dev_name.txt
 
 # Change to build directory
 WORKDIR /APKBUILD
@@ -195,11 +206,31 @@ EOF
 		"--mount type=bind,source=${temp_dir}/APKBUILD,target=/APKBUILD"
 		"--mount type=bind,source=${temp_dir}/packages,target=/root/packages"
 	)
-	run_command="abuild-keygen -a -n && abuild -F checksum && abuild -F srcpkg && abuild -F" # We can't not sign the packge, so we use a throwaway key
-	if [ ! "$no_pkg_tests" ]; then
-		run_command="${run_command}; ash"
+	# We can't not sign the package, so we generate a one time use key, the user has to install it with `--allow-untrusted`
+	run_command=(
+		"abuild-keygen -a -n"
+		"&& abuild -F checksum"
+		"&& abuild -F srcpkg"
+		"&& abuild -F"
+		"&& printf '%s\n' '### Package building complete. ###'"
+	)
+	# Testing installing the package and akms dynamic builds
+	if [ "$no_pkg_tests" != 'true' ]; then
+		run_command+=(
+			"&& apk add --allow-untrusted /root/packages/*/*.apk"
+			"&& akms -k \$(cat /kernel_dev_name.txt) build ${software_name}-oot"
+			"&& akms -k \$(cat /kernel_dev_name.txt) install ${software_name}-oot"
+			"&& modinfo /lib/modules/\$(cat /kernel_dev_name.txt)/kernel/extra/akms/${software_name}.ko"
+			"&& printf '%s\n' '### Package installation and akms dynamic build tests complete. ###'"
+		)
 	fi
-	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-apk-builder ash -c "${run_command}" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
+	if [ "$inspect_container" == 'true' ]; then
+		run_command+=(
+			"&& printf '%s\n' '### Dropping into container shell. ###'"
+			"&& ash"
+		)
+	fi
+	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-apk-builder ash -c "${run_command[*]}" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
 	mkdir -p ".release/" # Copy out the built packages
 	cp "${temp_dir}/packages/"*/*.apk ".release/"
 }
