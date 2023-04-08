@@ -1,53 +1,60 @@
 # Overrides can be added to the beginning of the APKBUILD file
-source_modname=${source_modname:-"it87"}
-repo_name=${repo_name:-"it87"}
-repo_owner=${repo_owner:-"frankcrawford"}
-package_timestamp=${package_timestamp:-"$(date +%Y%m%d)"}
-# ${source:-} is expanded later in the script
+_source_modname=${_source_modname:-"it87"}
+_repo_name=${_repo_name:-"it87"}
+_repo_owner=${_repo_owner:-"frankcrawford"}
+_repo_commit=${_repo_commit:-"77abcbe0c49d7d8dc4530dcf51cecb40ef39f49a"}
+_package_timestamp=${_package_timestamp:-"$(date +%Y%m%d)"}
+# ${source:-} (no _ prefix) is, expanded later in the script. Only specify a file name without URL to use a local file.
 
-
-pkgname="${source_modname}-oot"
-pkgver=0_git${package_timestamp}
+pkgname="${_source_modname}-oot"
+pkgver=0_git${_package_timestamp}
 pkgrel=1
-pkgdesc="Userland package for the out-of-tree version of the \"${source_modname}\" module forked by \"${repo_owner}\""
-url="https://github.com/${repo_owner}/${repo_name}"
+pkgdesc="Userland package for the out-of-tree version of the \"${_source_modname}\" module forked by \"${_repo_owner}\""
+url="https://github.com/${_repo_owner}/${_repo_name}"
 arch="noarch"
 license="GPL-2.0-or-later"
 subpackages="
 	${pkgname}-akms:akms:x86_64
 	${pkgname}-doc:doc:noarch
 	${pkgname}-ignore_resource_conflict:ignore_resource_conflict:noarch"
-source=${source:-"${url}/tarball/${repo_commit}/${repo_name}.tar.gz"}
+source=${source:-"${url}/tarball/${_repo_commit}/${_repo_name}.tar.gz"}
 options="!check"
 
+# For some reason, akms doesn't remove the module after the package is uninstalled
+# So we do it via a post-deinstall script, this may become unnecessary in the future
+install -D -m 0755 <(printf '%s\n\n%s\n' '#!/bin/sh' "akms uninstall -k all '${pkgname}' || exit 0") "${startdir}/${pkgname}-akms.post-deinstall"
+install="${pkgname}-akms.post-deinstall"
+
 for i in "${PWD}" "${srcdir}"; do # Find where our tarball is, emulating RPM's SOURCE0 variable
-	[ -f "${i}/${repo_name}.tar.gz" ] && source0="${i}/${repo_name}.tar.gz"
+	[ -f "${i}/${_repo_name}.tar.gz" ] && source0="${i}/${_repo_name}.tar.gz"
 done
 source_dirname="$(tar -tzf "${source0}" | head -n 1 | head -c -2)" # Get the name of the dir inside the tarball dynamically
 
-
 prepare() {
 	default_prepare
+
 	[ -f "${srcdir}/${source_dirname}/Makefile" ] || { echo "ERROR: Makefile not found in expected location"; exit 1; }
+
 	[ "${builddir##*/}" != "${source_dirname}" ] || { echo "ERROR: builddir (from abuild) and source_dirname (from tarball) are overlapping."; exit 1; }
 	mkdir -p "${builddir}"
-}
+	
+	printf '%s\n' "override ${_source_modname} * akms" >"${builddir}/depmod_${pkgname}.conf"
+	printf '%s\n' "${_source_modname}" >"${builddir}/modload_${pkgname}.conf"
+	printf '%s\n' "options ${_source_modname} ignore_resource_conflict" >"${builddir}/modprobe_${pkgname}.conf"
 
-build() {
-	printf '%s\n' "override ${source_modname} * akms" >"${builddir}/depmod_${pkgname}.conf"
-	printf '%s\n' "${source_modname}" >"${builddir}/modload_${pkgname}.conf"
-	printf '%s\n' "options ${source_modname} ignore_resource_conflict" >"${builddir}/modprobe_${pkgname}.conf"
-
+	# We save the AKMBUILD externally so it is still available for the manual installation
+	# First we write the overrides, then append the original AKMBUILD.
 	printf '%s\n' \
 		"modname='${pkgname}'" \
 		"modver='${pkgver}'" \
-		"built_modules='${source_modname}.ko'" \
+		"built_modules='${_source_modname}.ko'" \
 		>"${builddir}/akmbuild_${pkgname}"
 	cat "${srcdir}/${source_dirname}/alpine/AKMBUILD" >>"${builddir}/akmbuild_${pkgname}"
 }
 
 package() {
 	depends="${pkgname}-akms" # Userland and src (AKMBUILD) packages depend on each other
+	
 	# Apparently Alpine only reads these files from /etc/, not the corresponding /usr/ locations
 	install -D -m 0644 "${builddir}/depmod_${pkgname}.conf" "${pkgdir}/etc/depmod.d/${pkgname}.conf"
 	install -D -m 0644 "${builddir}/modload_${pkgname}.conf" "${pkgdir}/etc/modules-load.d/${pkgname}.conf"
@@ -67,16 +74,15 @@ akms() {
 		akms
 		${pkgname}
 		" # Depends on akms AND the userland package
-	pkgdesc="akms package for the out-of-tree version of the \"${source_modname}\" module forked by \"${repo_owner}\""
+	pkgdesc="akms package for the out-of-tree version of the \"${_source_modname}\" module forked by \"${_repo_owner}\""
 	install -D -m 0644 "${builddir}/akmbuild_${pkgname}" "${subpkgdir}/usr/src/${pkgname}/AKMBUILD"
-	install_items="Makefile compat.h it87.c LICENSE"
-	for i in ${install_items}; do # ash doesn't support arrays, but fortunately this works for us
+	for i in "Makefile" "compat.h" "it87.c" "LICENSE"; do
 		install -D -m 0644 "${srcdir}/${source_dirname}/${i}" "${subpkgdir}/usr/src/${pkgname}/${i}"
 	done
 }
 
 ignore_resource_conflict() {
-	pkgdesc="Optional "modprobe.d" entry for the "${source_modname}" module to ignore ACPI resource conflicts."
+	pkgdesc="Optional "modprobe.d" entry for the "${_source_modname}" module to ignore ACPI resource conflicts."
 	install -D -m 0644 "${builddir}/modprobe_${pkgname}.conf" "${subpkgdir}/etc/modprobe.d/${pkgname}.conf"
 }
 

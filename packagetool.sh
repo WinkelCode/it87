@@ -119,12 +119,13 @@ parse_arguments() {
 
 gather_repo_info() {
 	[ ! "$software_name" ] && software_name="${PWD##*/}" # Use directory name as software name if not specified
-	current_commit="$(git rev-parse HEAD 2>/dev/null || printf 'unknown')" # Commit hash of the current commit
 	working_tree_changed="$(git diff-index --quiet HEAD -- &>/dev/null; printf '%s' "$?")" # Whether the working tree has been modified
 
 	if [ "$working_tree_changed" = '0' ]; then # If the working tree is clean, use the commit date. $working_tree_changed is also >0 if we're not a git repository.
+		current_commit="$(git rev-parse HEAD 2>/dev/null || printf 'unknown')" # Commit hash of the current commit
 		working_tree_timestamp="$(git show -s --format=%cd --date=iso-strict "${current_commit}" 2>/dev/null || printf 'unknown')"
 	else # Otherwise, use the current date
+		current_commit='unknown'
 		working_tree_timestamp="$(date --iso-8601=seconds)"
 	fi
 
@@ -181,56 +182,67 @@ FROM docker.io/library/alpine:latest
 RUN apk add \
 	abuild \
 	build-base \
-	linux-lts-dev
+	linux-lts-dev \
+	akms
 
 # Save kernel dev name
 RUN printf '%s\n' "$(ls /lib/modules/ | head -n 1)" >/kernel_dev_name.txt
-
-# Change to build directory
-WORKDIR /APKBUILD
 EOF
 )
+	printf '%s\n' "${containerfile}" | ${container_runtime} build -t ${software_name}-apk-builder -f - # Build the container
+
 	mkdir -p "${temp_dir}/"{APKBUILD/src,packages} # Create the shared directories
+	container_mounts=(
+		"--mount type=bind,source=${temp_dir}/APKBUILD,target=/APKBUILD"
+		"--mount type=bind,source=${temp_dir}/packages,target=/root/packages"
+		"--mount type=bind,source=${temp_dir}/run_command.sh,target=/run_command.sh"
+	)
+
 	build_overrides=(
-		"source_modname=\"${software_name}\""
-		"repo_name=\"${origin_name}\""
-		"repo_owner=\"${origin_owner}\""
-		"package_timestamp=\"$(date --date="${working_tree_timestamp}" +%Y%m%d)\""
+		"_source_modname=\"${software_name}\""
+		"_repo_name=\"${origin_name}\""
+		"_repo_owner=\"${origin_owner}\""
+		"_repo_commit=\"${current_commit}\""
+		"_package_timestamp=\"$(date --date="${working_tree_timestamp}" +%Y%m%d)\""
 		"source=\"${origin_name}.tar.gz\""
 	)
 	printf '%s\n' "${build_overrides[@]}" >"${temp_dir}/APKBUILD/APKBUILD" # Write overrides
 	cat "./alpine/APKBUILD" >>"${temp_dir}/APKBUILD/APKBUILD" # Append the APKBUILD
+
 	tar -czvf "${temp_dir}/APKBUILD/${origin_name}.tar.gz" "../${PWD##*/}" # Create the source tarball, for compatibility with GitHub tarballs we put the repo in a subdirectory of the tarball
-	printf '%s\n' "${containerfile}" | ${container_runtime} build -t ${software_name}-apk-builder -f - # Build the container
-	container_mounts=(
-		"--mount type=bind,source=${temp_dir}/APKBUILD,target=/APKBUILD"
-		"--mount type=bind,source=${temp_dir}/packages,target=/root/packages"
-	)
-	# We can't not sign the package, so we generate a one time use key, the user has to install it with `--allow-untrusted`
+
 	run_command=(
-		"abuild-keygen -a -n"
+		"("
+		"cd /APKBUILD"
+		"&& abuild-keygen -a -n" # We can't not sign the package, so we generate a one time use key, the user has to install it with `--allow-untrusted`
 		"&& abuild -F checksum"
 		"&& abuild -F srcpkg"
 		"&& abuild -F"
-		"&& printf '%s\n' '### Package building complete. ###'"
+		")"
+		"&& printf '%s\n' '-> Package building complete.'"
 	)
-	# Testing installing the package and akms dynamic builds
-	if [ "$no_pkg_tests" != 'true' ]; then
+	if [ "$no_pkg_tests" != 'true' ]; then # Testing installing the package and akmod dynamic builds
 		run_command+=(
 			"&& apk add --allow-untrusted /root/packages/*/*.apk"
-			"&& akms -k \$(cat /kernel_dev_name.txt) build ${software_name}-oot"
-			"&& akms -k \$(cat /kernel_dev_name.txt) install ${software_name}-oot"
-			"&& modinfo /lib/modules/\$(cat /kernel_dev_name.txt)/kernel/extra/akms/${software_name}.ko"
-			"&& printf '%s\n' '### Package installation and akms dynamic build tests complete. ###'"
+			"&& akms --kernel \$(cat /kernel_dev_name.txt) build ${software_name}-oot"
+			"&& akms --kernel \$(cat /kernel_dev_name.txt) install ${software_name}-oot"
+			"&& modinfo /lib/modules/\$(cat /kernel_dev_name.txt)/kernel/extra/akms/${software_name}.ko*" # * in case compression is used
+			"&& printf '%s\n' '-> Checking if module is removed on package uninstall.'"
+			"&& apk del ${software_name}-oot*"
+			"&& { ! modinfo --filename /lib/modules/\$(cat /kernel_dev_name.txt)/kernel/extra/akms/${software_name}.ko* &>/dev/null || { printf '%s\n' '-> Error: Module was not removed on package uninstall.'; return 1; }; }"
+			"&& printf '%s\n' '-> Package installation and akms dynamic build tests successful.'"
 		)
 	fi
 	if [ "$inspect_container" == 'true' ]; then
 		run_command+=(
-			"&& printf '%s\n' '### Dropping into container shell. ###'"
-			"&& ash"
+			"; printf '%s\n' '-> Dropping into container shell.'"
+			"; ash"
 		)
 	fi
-	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-apk-builder ash -c "${run_command[*]}" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
+	install -D -m 0755 <(printf '%s\n\n%s\n' '#!/bin/sh' "${run_command[*]}") "${temp_dir}/run_command.sh"
+
+	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-apk-builder ash -c "/run_command.sh" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
+
 	mkdir -p ".release/" # Copy out the built packages
 	cp "${temp_dir}/packages/"*/*.apk ".release/"
 }
@@ -240,15 +252,35 @@ build_rpm() {
 FROM registry.fedoraproject.org/fedora-minimal:latest
 
 # Install the build dependencies
+# Note: Unlike with Alpine, we can't get away with only the -dev(el) package, we need the full kernel package.
+# TODO: Unfortunately we need the full 'kernel' package for build testing, maybe there is a way to reliably install it without dependencies?
+# DNF is needed by akmods to install the resulting package.
 RUN microdnf install -y \
 	rpmdevtools \
-	kmodtool
+	kmodtool \
+	kernel \
+	kernel-devel \
+	akmods \
+	dnf
+
+# Save kernel dev name
+RUN printf '%s\n' "$(ls /lib/modules/ | head -n 1)" >/kernel_dev_name.txt
 
 # Create the rpmbuild directory structure
 RUN rpmdev-setuptree
 EOF
 )
+	printf '%s\n' "${containerfile}" | ${container_runtime} build -t ${software_name}-rpm-builder -f - # Build the container
+
 	mkdir -p "${temp_dir}/"{SOURCES,SPECS,RPMS,SRPMS} # Create shared build directories in temp dir
+	container_mounts=(
+		"--mount type=bind,source=${temp_dir}/SOURCES,target=/root/rpmbuild/SOURCES"
+		"--mount type=bind,source=${temp_dir}/SPECS,target=/root/rpmbuild/SPECS"
+		"--mount type=bind,source=${temp_dir}/RPMS,target=/root/rpmbuild/RPMS"
+		"--mount type=bind,source=${temp_dir}/SRPMS,target=/root/rpmbuild/SRPMS"
+		"--mount type=bind,source=${temp_dir}/run_command.sh,target=/run_command.sh"
+	)
+
 	spec_overrides=(
 		"%global source_modname ${software_name}"
 		"%global repo_name ${origin_name}"
@@ -261,49 +293,94 @@ EOF
 		printf '%s\n' "${spec_overrides[@]}" >"${spec_file_target}"
 		cat "${spec_file}" >>"${spec_file_target}"
 	done
+
 	tar -czvf "${temp_dir}/SOURCES/${origin_name}.tar.gz" "../${PWD##*/}" # The spec files expect the sources in a subdirectory of the archive (as with GitHub tarballs)
-	printf '%s\n' "${containerfile}" | ${container_runtime} build -t ${software_name}-rpm-builder -f - # Build the container
-	container_mounts=(
-		"--mount type=bind,source=${temp_dir}/SOURCES,target=/root/rpmbuild/SOURCES"
-		"--mount type=bind,source=${temp_dir}/SPECS,target=/root/rpmbuild/SPECS"
-		"--mount type=bind,source=${temp_dir}/RPMS,target=/root/rpmbuild/RPMS"
-		"--mount type=bind,source=${temp_dir}/SRPMS,target=/root/rpmbuild/SRPMS"
+
+	run_command=(
+		"rpmbuild -ba /root/rpmbuild/SPECS/*.spec"
+		"&& printf '%s\n' '-> Package building complete.'"
 	)
-	run_command="rpmbuild -ba /root/rpmbuild/SPECS/*.spec"
-	if [ ! "$no_pkg_tests" ]; then
-		run_command="${run_command}; printf '%s\n' 'TODO'"
+	if [ "$no_pkg_tests" != 'true' ]; then # Testing installing the package and akms dynamic builds
+		run_command+=(
+			"&& rpm --install /root/rpmbuild/RPMS/*/*.rpm"
+			"&& akmods --kernels \$(cat /kernel_dev_name.txt) --akmod ${software_name}-oot"
+			"&& modinfo /lib/modules/\$(cat /kernel_dev_name.txt)/extra/${software_name}-oot/${software_name}.ko*"
+			"&& printf '%s\n' '-> Checking if module is removed on package uninstall.'"
+			"&& rpm --query --all '*${software_name}-oot*' | xargs rpm --erase"
+			"&& { ! modinfo --filename /lib/modules/\$(cat /kernel_dev_name.txt)/extra/${software_name}-oot/${software_name}.ko* &>/dev/null || { printf '%s\n' '-> Error: Module was not removed on package uninstall.'; return 1; }; }"
+			"&& printf '%s\n' '-> Package installation and akms dynamic build tests successful.'"
+		)
 	fi
-	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-rpm-builder bash -c "${run_command}" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
+	if [ "$inspect_container" == 'true' ]; then
+		run_command+=(
+			"; printf '%s\n' '-> Dropping into container shell.'"
+			"; bash"
+		)
+	fi
+	install -D -m 0755 <(printf '%s\n\n%s\n' '#!/bin/sh' "${run_command[*]}") "${temp_dir}/run_command.sh"
+
+	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-rpm-builder bash -c "/run_command.sh" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
+
 	mkdir -p ".release/"{SRPMS,RPMS}
 	cp "${temp_dir}/SRPMS/"*.src.rpm ".release/SRPMS/"
 	cp "${temp_dir}/RPMS/"*/*.rpm ".release/RPMS/"
 }
 
-build_deb() {
+build_deb() { # TODO: Support this packaging method like apk and rpm
 	containerfile=$(cat <<'EOF'
 FROM docker.io/library/debian:stable-slim
 
 RUN apt-get update && apt-get install -y \
 	debhelper \
 	dkms
+
+# Save kernel dev name
+RUN printf '%s\n' "$(ls /lib/modules/ | head -n 1)" >/kernel_dev_name.txt
 EOF
 )
-	cp -r "../${PWD##*/}" "${temp_dir}/${software_name}"
 	printf '%s\n' "${containerfile}" | ${container_runtime} build -t ${software_name}-deb-builder -f -
+	
+	cp -r "../${PWD##*/}" "${temp_dir}/${software_name}"
 	container_mounts=(
 		"--mount type=bind,source=${temp_dir}/,target=/root"
+		"--mount type=bind,source=${temp_dir}/run_command.sh,target=/run_command.sh"
 	)
-	run_command="cd /root/${software_name} && dpkg-buildpackage --no-sign"
-	if [ ! "$no_pkg_tests" ]; then
-		run_command="${run_command}; printf '%s\n' 'TODO'"
+
+	run_command=(
+		"("
+		"cd /root/${software_name}"
+		"&& dpkg-buildpackage --no-sign"
+		")"
+		"&& printf '%s\n' '-> Package building complete.'"
+	)
+	if [ "$no_pkg_tests" != 'true' ]; then # Testing installing the package and dkms dynamic builds
+		run_command+=(
+			"&& dpkg --install /root/*.deb"
+			"&& modinfo /lib/modules/\$(cat /kernel_dev_name.txt)/updates/dkms/${software_name}.ko*"
+			"&& printf '%s\n' '-> Checking if module is removed on package uninstall.'"
+			"&& dpkg-query --show --showformat='\${Package}' '*${software_name}*' | xargs dpkg --remove"
+			"&& { ! modinfo --filename /lib/modules/\$(cat /kernel_dev_name.txt)/updates/dkms/${software_name}.ko* &>/dev/null || { printf '%s\n' '-> Error: Module was not removed on package uninstall.'; return 1; }; }"
+			"&& printf '%s\n' '-> Package installation and akms dynamic build tests successful.'"
+		)
 	fi
-	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-deb-builder bash -c "${run_command}" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
+	if [ "$inspect_container" == 'true' ]; then
+		run_command+=(
+			"; printf '%s\n' '-> Dropping into container shell.'"
+			"; bash"
+		)
+	fi
+	install -D -m 0755 <(printf '%s\n\n%s\n' '#!/bin/sh' "${run_command[*]}") "${temp_dir}/run_command.sh"
+	
+	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-deb-builder bash -c "${run_command[*]}" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
+
 	mkdir -p ".release/"
 	cp "${temp_dir}/"*.deb ".release/"
 }
 
 build_tarball() {
-	printf '%s\n' "NOT IMPLEMENTED YET"
+	# Package up the source code
+	tar -czvf "${temp_dir}/${software_name}^$(date --date="${working_tree_timestamp}" +%Y%m%d).git${current_commit:0:7}.tar.gz" "../${PWD##*/}"
+	ls ${temp_dir}
 }
 
 

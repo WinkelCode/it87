@@ -4,7 +4,7 @@
 # Placeholder information end
 
 
-Name:           %{source_modname}-ignore_resource_conflict
+Name:           %{source_modname}-oot-ignore_resource_conflict
 Version:        %{!?version_override:0^%{package_timestamp}}%{?version_override:%{version_override}} 
 Release:        1%{?dist}
 Summary:        Optional "modprobe.d" entry for the "%{source_modname}" module to ignore ACPI resource conflicts.
@@ -22,7 +22,6 @@ Package to ignore resource conflicts for the %{source_modname} kernel module.
 %prep
 %setup -q -c -T
 
-%build
 printf '%s\n' "options %{source_modname} ignore_resource_conflict" >"modprobe_%{name}.conf"
 
 %install

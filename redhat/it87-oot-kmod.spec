@@ -43,9 +43,7 @@ done
 %build
 for kernel_version in %{?kernel_versions}; do
 	(cd "_kmod_build_${kernel_version%%___*}/" &&
-	rm -rf .git && # Remove git metadata so the build uses our version string from "VERSION"
-	printf '%s' "%{repo_owner}-%{version}" >"VERSION" &&
-	make %{?_smp_mflags} TARGET="${kernel_version%%___*}" modules
+	make %{?_smp_mflags} TARGET="${kernel_version%%___*}" DRIVER_VERSION="%{version}" modules
 	# xz -f "%{source_modname}.ko" # No longer used, kmodtool compresses when appropriate, doing it here causes 'brp-kmodsign' to get indefinitely stuck.
 	) || exit 1
 done

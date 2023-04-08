@@ -4,8 +4,9 @@ built_modules=${built_modules:-it87.ko}
 
 build() {
 	# TODO recommend installing build packages
+	# We need linux-{flavor}-dev and ???
 	for i in compat.h it87.c Makefile; do
 		cp "${srcdir}/${i}" "${builddir}/"
 	done
-	make $MAKEFLAGS modules TARGET="$kernel_ver" DRIVER_VERSION="$modver"
+	make $MAKEFLAGS TARGET="$kernel_ver" DRIVER_VERSION="$modver" modules
 }

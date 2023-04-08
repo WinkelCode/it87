@@ -35,7 +35,6 @@ if [ ! -f "%{source_dirname}/Makefile" ]; then
 	exit 1
 fi
 
-%build
 printf '%s' "override %{source_modname} * extra/%{name}" >"depmod_%{name}.conf"
 printf '%s' "%{source_modname}" >"modload_%{name}.conf"
 
