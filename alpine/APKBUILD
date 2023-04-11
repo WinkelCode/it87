@@ -1,10 +1,10 @@
 # Overrides can be added to the beginning of the APKBUILD file
-_source_modname=${_source_modname:-"it87"}
-_repo_name=${_repo_name:-"it87"}
-_repo_owner=${_repo_owner:-"frankcrawford"}
-_repo_commit=${_repo_commit:-"77abcbe0c49d7d8dc4530dcf51cecb40ef39f49a"}
-_package_timestamp=${_package_timestamp:-"$(date +%Y%m%d)"}
-# ${source:-} (no _ prefix) is, expanded later in the script. Only specify a file name without URL to use a local file.
+_source_modname="${_source_modname:-"it87"}"
+_repo_name="${_repo_name:-"it87"}"
+_repo_owner="${_repo_owner:-"frankcrawford"}"
+_repo_commit="${_repo_commit:-"77abcbe0c49d7d8dc4530dcf51cecb40ef39f49a"}"
+_package_timestamp="${_package_timestamp:-"$(date '+%Y%m%d')"}"
+# ${source:-} (no _ prefix) is expanded later in the script. Only specify a file name without URL to use a local file.
 
 pkgname="${_source_modname}-oot"
 pkgver=0_git${_package_timestamp}

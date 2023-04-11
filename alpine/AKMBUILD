@@ -1,6 +1,6 @@
-modname=${modname:-it87}
-modver=${modver:-0_git$(date +%Y%m%d)}
-built_modules=${built_modules:-it87.ko}
+modname="${modname:-it87}"
+modver="${modver:-0_git$(date '+%Y%m%d')}"
+built_modules="${built_modules:-it87.ko}"
 
 build() {
 	# TODO recommend installing build packages

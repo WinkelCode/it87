@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-
+software_name='it87' # Hardcoded default
 
 # -----------------
 # Utility functions
@@ -12,7 +12,7 @@ Options:
 	(Required) --container_runtime=CONTAINER_RUNTIME
 		Container runtime to use. Valid values are 'podman' and 'docker'.
 	(Required) --package_system=PACKAGE_SYSTEM
-		Package system to target. Valid values are 'apk', 'deb', 'rpm', and 'tarball'.
+		Package system to target. Valid values are 'apk', 'deb', and 'rpm'.
 	(Optional) --software_name=SOFTWARE_NAME
 		Name of the software to package. Defaults to the name of the current directory ('${PWD##*/}').
 	(Optional) --no_pkg_tests
@@ -51,7 +51,7 @@ parse_arguments() {
 				;;
 			--package_system=*)
 				package_system="${1#*=}"
-				valid_package_systems='(apk|deb|rpm|tarball)'
+				valid_package_systems='(apk|deb|rpm)'
 				if [[ ! "$package_system" =~ ^${valid_package_systems}$ ]]; then
 					printf '%s\n' "Error: Invalid package system '$package_system', must be one of '$valid_package_systems'"
 					exit 1
@@ -148,7 +148,7 @@ print_repo_info() {
 
 startup() {
 	printf '%s' "Deleting old .release/ folder and creating temporary directory..."
-	rm -rf ".release/" || { printf '\n%s\n' "Error: Failed to delete previous release directory."; exit 1; }
+	rm -rf "./.release/" || { printf '\n%s\n' "Error: Failed to delete previous release directory."; exit 1; }
 	temp_dir="$(mktemp -t --directory ${software_name}_tmp.XXXXXXXXXX)" || { printf '\n%s\n' "Error: Failed to create temporary directory."; exit 1; }
 	printf '%s\n' " OK."
 }
@@ -209,7 +209,7 @@ EOF
 	printf '%s\n' "${build_overrides[@]}" >"${temp_dir}/APKBUILD/APKBUILD" # Write overrides
 	cat "./alpine/APKBUILD" >>"${temp_dir}/APKBUILD/APKBUILD" # Append the APKBUILD
 
-	tar -czvf "${temp_dir}/APKBUILD/${origin_name}.tar.gz" "../${PWD##*/}" # Create the source tarball, for compatibility with GitHub tarballs we put the repo in a subdirectory of the tarball
+	tar --exclude="../${PWD##*/}/.git" -czvf "${temp_dir}/APKBUILD/${origin_name}.tar.gz" "../${PWD##*/}" # Create the source tarball, for compatibility with GitHub tarballs we put the repo in a subdirectory of the tarball
 
 	run_command=(
 		"("
@@ -243,8 +243,29 @@ EOF
 
 	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-apk-builder ash -c "/run_command.sh" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
 
-	mkdir -p ".release/" # Copy out the built packages
-	cp "${temp_dir}/packages/"*/*.apk ".release/"
+	mkdir -p "./.release/" # Copy out the built packages
+	cp "${temp_dir}/packages/"*/*.apk "./.release/"
+
+	# Copy akms files for manual install
+	akms_manual_root_folder='./.release/'
+	mkdir -p "${akms_manual_root_folder}" # In case we decide to change the location of the simulated root folder
+
+	mainpkg=$(ls "./.release/"*.apk | head -n 1)
+	mainpkgfiles=(
+		"etc/depmod.d/${software_name}-oot.conf"
+		"etc/modules-load.d/${software_name}-oot.conf"
+	)
+	tar -xf "${mainpkg}" -C "${akms_manual_root_folder}" "${mainpkgfiles[@]}" --warning=no-unknown-keyword
+	akmspkg=$(ls "./.release/"*akms*.apk | head -n 1)
+	akmspkgfiles=(
+		"usr/src/${software_name}-oot/"
+	)
+	tar -xf "${akmspkg}" -C "${akms_manual_root_folder}" "${akmspkgfiles[@]}" --warning=no-unknown-keyword
+	ircpkg=$(ls "./.release/"*ignore_resource_conflict*.apk | head -n 1)
+	ircpkgfiles=(
+		"etc/modprobe.d/${software_name}-oot.conf"
+	)
+	tar -xf "${ircpkg}" -C "${akms_manual_root_folder}" "${ircpkgfiles[@]}" --warning=no-unknown-keyword
 }
 
 build_rpm() {
@@ -294,7 +315,7 @@ EOF
 		cat "${spec_file}" >>"${spec_file_target}"
 	done
 
-	tar -czvf "${temp_dir}/SOURCES/${origin_name}.tar.gz" "../${PWD##*/}" # The spec files expect the sources in a subdirectory of the archive (as with GitHub tarballs)
+	tar --exclude="../${PWD##*/}/.git" -czvf "${temp_dir}/SOURCES/${origin_name}.tar.gz" "../${PWD##*/}" # The spec files expect the sources in a subdirectory of the archive (as with GitHub tarballs)
 
 	run_command=(
 		"rpmbuild -ba /root/rpmbuild/SPECS/*.spec"
@@ -321,9 +342,9 @@ EOF
 
 	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-rpm-builder bash -c "/run_command.sh" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
 
-	mkdir -p ".release/"{SRPMS,RPMS}
-	cp "${temp_dir}/SRPMS/"*.src.rpm ".release/SRPMS/"
-	cp "${temp_dir}/RPMS/"*/*.rpm ".release/RPMS/"
+	mkdir -p "./.release/"{SRPMS,RPMS}
+	cp "${temp_dir}/SRPMS/"*.src.rpm "./.release/SRPMS/"
+	cp "${temp_dir}/RPMS/"*/*.rpm "./.release/RPMS/"
 }
 
 build_deb() { # TODO: Support this packaging method like apk and rpm
@@ -373,14 +394,8 @@ EOF
 	
 	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-deb-builder bash -c "${run_command[*]}" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
 
-	mkdir -p ".release/"
-	cp "${temp_dir}/"*.deb ".release/"
-}
-
-build_tarball() {
-	# Package up the source code
-	tar -czvf "${temp_dir}/${software_name}^$(date --date="${working_tree_timestamp}" +%Y%m%d).git${current_commit:0:7}.tar.gz" "../${PWD##*/}"
-	ls ${temp_dir}
+	mkdir -p "./.release/"
+	cp "${temp_dir}/"*.deb "./.release/"
 }
 
 
@@ -403,9 +418,6 @@ case "$package_system" in
 		;;
 	deb)
 		build_deb
-		;;
-	tarball)
-		build_tarball
 		;;
 	*)
 		printf '%s\n' "Error: Unknown package system '$package_system'" # This should never happen since the argument parser validates the input
