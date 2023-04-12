@@ -15,11 +15,11 @@ jobs:
           key: containers-${{ steps.get-current-week-number.outputs.WEEK_NUMBER }} # This will use the output of the previous step to create a cache key that expires every week. [3, 4]
       - name: Run packagetool.sh
         run: sudo ./packagetool.sh --container_runtime=podman --package_system=apk --print_temp_dir=normal # This will run the script from the root of the repo. [2]
-      - name: Save /var/lib/containers cache
-        uses: actions/cache@v3 # This will use the cache action to save the cache for /var/lib/containers. [3]
-        with:
-          path: /var/lib/containers
-          key: containers-${{ steps.get-current-week-number.outputs.WEEK_NUMBER }} # This will use the same key as before to overwrite the cache. [3, 5]
+      # - name: Save /var/lib/containers cache
+      #   uses: actions/cache@v3 # This will use the cache action to save the cache for /var/lib/containers. [3]
+      #   with:
+      #     path: /var/lib/containers
+      #     key: containers-${{ steps.get-current-week-number.outputs.WEEK_NUMBER }} # This will use the same key as before to overwrite the cache. [3, 5]
       - name: Upload .release folder as artifact
         uses: actions/upload-artifact@v2
         with:
