@@ -12,7 +12,7 @@ jobs:
       - name: Get Podman user var directory
         id: podman_user_var_dir
         run: printf 'PODMAN_USER_VAR_DIR=%s' "$(podman info --format '{{.Store.GraphRoot}}' | sed 's|/[^/]*$|/|')" | tee -a "$GITHUB_OUTPUT"
-      - name: Podman Cache ${{ steps.podman_user_var_dir.outputs.PODMAN_USER_VAR_DIR }}
+      - name: GitHub Actions Cache '${{ steps.podman_user_var_dir.outputs.PODMAN_USER_VAR_DIR }}'
         uses: actions/cache@v3
         with:
           path: ${{ steps.podman_user_var_dir.outputs.PODMAN_USER_VAR_DIR }}
