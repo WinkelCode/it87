@@ -21,16 +21,16 @@ jobs:
           key: containers-${{ env.CACHE_YEAR_AND_WEEK }}
       - name: Install cached Podman directory
         run: |
-          if [ -f "${{ step.jobvars.outputs.PODMAN_USER_VAR_DIR_PARENT }}/containers.tar.gz" ]; then
+          if [ -f "${{ steps.jobvars.outputs.PODMAN_USER_VAR_DIR_PARENT }}/containers.tar.gz" ]; then
             printf '%s\n' "Detected Podman var archive, restoring it..."
-            rm -rf "${{ step.jobvars.outputs.PODMAN_USER_VAR_DIR }}"
-            tar xzvf "${{ step.jobvars.outputs.PODMAN_USER_VAR_DIR_PARENT }}/containers.tar.gz" -C "${{ step.jobvars.outputs.PODMAN_USER_VAR_DIR_PARENT }}"
+            rm -rf "${{ steps.jobvars.outputs.PODMAN_USER_VAR_DIR }}"
+            tar xzvf "${{ steps.jobvars.outputs.PODMAN_USER_VAR_DIR_PARENT }}/containers.tar.gz" -C "${{ steps.jobvars.outputs.PODMAN_USER_VAR_DIR_PARENT }}"
           fi
       - name: Run packagetool.sh
         run: ./packagetool.sh --container_runtime=podman --package_system=apk --print_temp_dir=normal
       - name: Save Podman var directory
         run: |
-          tar czvf "${{ step.jobvars.outputs.PODMAN_USER_VAR_DIR_PARENT }}/containers.tar.gz" -C "${{ step.jobvars.outputs.PODMAN_USER_VAR_DIR_PARENT }}" containers
+          tar czvf "${{ steps.jobvars.outputs.PODMAN_USER_VAR_DIR_PARENT }}/containers.tar.gz" -C "${{ steps.jobvars.outputs.PODMAN_USER_VAR_DIR_PARENT }}" containers
       - name: Upload .release folder as artifact
         uses: actions/upload-artifact@v3
         with:
