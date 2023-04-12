@@ -9,12 +9,10 @@ jobs:
       - name: Get current week of the year
         id: current_week_number
         run: echo "WEEK_NUMBER=$(date +%V)" >>"$GITHUB_OUTPUT"
-      - name: Set /var/lib/containers permissions
-        run: sudo chown -R $USER:$USER /var/lib/containers
       - name: Restore /var/lib/containers cache
         uses: actions/cache@v3
         with:
-          path: /var/lib/containers
+          path: $HOME/.local/share/containers
           key: containers-${{ steps.current_week_number.outputs.WEEK_NUMBER }}
       - name: Run packagetool.sh
         run: ./packagetool.sh --container_runtime=podman --package_system=apk --print_temp_dir=normal
