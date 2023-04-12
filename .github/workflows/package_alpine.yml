@@ -10,9 +10,9 @@ jobs:
         run: |
           PODMAN_USER_VAR_DIR="$(printf '%s' "$(podman info --format '{{.Store.GraphRoot}}' | sed 's|/[^/]*$|/|')")"
           PODMAN_USER_VAR_DIR_PARENT="$(printf '%s' "$PODMAN_USER_VAR_DIR" | sed 's|/[^/]*/$|/|')"
-          printf 'PODMAN_USER_VAR_DIR=%s' "$PODMAN_USER_VAR_DIR" | tee -a "$GITHUB_ENV"
-          printf 'PODMAN_USER_VAR_DIR_PARENT=%s' "$PODMAN_USER_VAR_DIR_PARENT" | tee -a "$GITHUB_ENV"
-          printf 'CACHE_YEAR_AND_WEEK=%s' "$(date +Y%YW%V)" | tee -a "$GITHUB_ENV"
+          printf 'PODMAN_USER_VAR_DIR=%s\n' "$PODMAN_USER_VAR_DIR" | tee -a "$GITHUB_ENV"
+          printf 'PODMAN_USER_VAR_DIR_PARENT=%s\n' "$PODMAN_USER_VAR_DIR_PARENT" | tee -a "$GITHUB_ENV"
+          printf 'CACHE_YEAR_AND_WEEK=%s\n' "$(date +Y%YW%V)" | tee -a "$GITHUB_ENV"
       - name: GitHub Actions Cache Podman var directory
         uses: actions/cache@v3
         with:
