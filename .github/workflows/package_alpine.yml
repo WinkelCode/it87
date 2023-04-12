@@ -5,19 +5,25 @@ jobs:
   packagetool:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Get current week of the year
-        id: current_week_number
-        run: echo "WEEK_NUMBER=$(date +%V)" >>"$GITHUB_OUTPUT"
-      - name: Restore /var/lib/containers cache
-        uses: actions/cache@v3
-        with:
-          path: $HOME/.local/share/containers
-          key: containers-${{ steps.current_week_number.outputs.WEEK_NUMBER }}
-      - name: Run packagetool.sh
-        run: ./packagetool.sh --container_runtime=podman --package_system=apk --print_temp_dir=normal
-      - name: Upload .release folder as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: release-folder
-          path: ./.release
+      - name: Debug
+        run: podman info
+      # - uses: actions/checkout@v3
+      # - name: Get current week of the year
+      #   id: current_week_number
+      #   run: echo "WEEK_NUMBER=$(date +%V)" >>"$GITHUB_OUTPUT"
+      # - name: Get Podman user var directory
+      #   id: podman_user_var_dir
+      #   # run: echo "$HOME/.local/share/containers" >>"$GITHUB_OUTPUT"
+      #   run: echo "PODMAN_USER_VAR_DIR=$(podman info --format '{{.Store.GraphRoot}}')" >>"$GITHUB_OUTPUT
+      # - name: Podman Cache
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: ${{ steps.podman_user_var_dir.outputs.PODMAN_USER_VAR_DIR }}
+      #     key: containers-${{ steps.current_week_number.outputs.WEEK_NUMBER }}
+      # - name: Run packagetool.sh
+      #   run: ./packagetool.sh --container_runtime=podman --package_system=apk --print_temp_dir=normal
+      # - name: Upload .release folder as artifact
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: release-folder
+      #     path: ./.release
