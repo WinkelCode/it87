@@ -31,7 +31,7 @@ jobs:
         run: ./packagetool.sh --container_runtime=podman --package_system=apk --print_temp_dir=normal
       - name: Save Podman var directory
         run: |
-          tar czvf "${{ steps.jobvars.outputs.PODMAN_USER_VAR_DIR_PARENT }}containers.tar.gz" -C "${{ steps.jobvars.outputs.PODMAN_USER_VAR_DIR_PARENT }}" containers
+          tar czf "${{ steps.jobvars.outputs.PODMAN_USER_VAR_DIR_PARENT }}containers.tar.gz" -C "${{ steps.jobvars.outputs.PODMAN_USER_VAR_DIR_PARENT }}" containers
       - name: Upload .release folder as artifact
         uses: actions/upload-artifact@v3
         with:
