@@ -18,8 +18,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ steps.jobvars.outputs.PODMAN_USER_VAR_DIR_PARENT }}containers.tar.gz
-          key: containers-${{ env.CACHE_YEAR_AND_WEEK }}
-          # key: containers-${{ steps.jobvars.outputs.CACHE_YEAR_AND_WEEK }}
+          key: containers-${{ steps.jobvars.outputs.CACHE_YEAR_AND_WEEK }}
       - name: Install cached Podman directory
         run: |
           if [ -f "${{ steps.jobvars.outputs.PODMAN_USER_VAR_DIR_PARENT }}containers.tar.gz" ]; then
