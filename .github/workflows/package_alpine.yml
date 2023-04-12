@@ -6,27 +6,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Get current week of the year
-        id: current_year_and_week
-        run: printf 'YEAR_AND_WEEK=%s' "$(date +Y%YW%V)" | tee -a "$GITHUB_OUTPUT"
-      - name: Get Podman user var directory
-        id: podman_user_var_dir
+      - name: Configure job variables
         run: |
           PODMAN_USER_VAR_DIR="$(printf '%s' "$(podman info --format '{{.Store.GraphRoot}}' | sed 's|/[^/]*$|/|')")"
           PODMAN_USER_VAR_DIR_PARENT="$(printf '%s' "$PODMAN_USER_VAR_DIR" | sed 's|/[^/]*/$|/|')"
-          printf 'PODMAN_USER_VAR_DIR=%s' "$PODMAN_USER_VAR_DIR" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
-          printf 'PODMAN_USER_VAR_DIR_PARENT=%s' "$PODMAN_USER_VAR_DIR_PARENT" | tee -a "$GITHUB_OUTPUT" | tee -a "$GITHUB_ENV"
+          printf 'PODMAN_USER_VAR_DIR=%s' "$PODMAN_USER_VAR_DIR" | tee -a "$GITHUB_ENV"
+          printf 'PODMAN_USER_VAR_DIR_PARENT=%s' "$PODMAN_USER_VAR_DIR_PARENT" | tee -a "$GITHUB_ENV"
+          printf 'CACHE_YEAR_AND_WEEK=%s' "$(date +Y%YW%V)" | tee -a "$GITHUB_ENV"
       - name: GitHub Actions Cache Podman var directory
         uses: actions/cache@v3
         with:
-          path: ${{ steps.podman_user_var_dir.outputs.PODMAN_USER_VAR_DIR }}
-          key: containers-${{ steps.current_year_and_week.outputs.YEAR_AND_WEEK }}
+          path: ${{ env.PODMAN_USER_VAR_DIR_PARENT }}/containers.tar.gz
+          key: containers-${{ env.CACHE_YEAR_AND_WEEK }}
       - name: Install cached Podman directory
         run: |
-          if [ -f "$PODMAN_USER_VAR_DIR_PARENT/containers.tar.gz" ]; then
+          if [ -f "${{ env.PODMAN_USER_VAR_DIR_PARENT }}/containers.tar.gz" ]; then
             printf '%s\n' "Detected Podman var archive, restoring it..."
-            rm -rf "$PODMAN_USER_VAR_DIR"
-            tar xzvf "$PODMAN_USER_VAR_DIR_PARENT/containers.tar.gz" -C "$PODMAN_USER_VAR_DIR_PARENT"
+            rm -rf "${{ env.PODMAN_USER_VAR_DIR }}"
+            tar xzvf "${{ env.PODMAN_USER_VAR_DIR_PARENT }}/containers.tar.gz" -C "${{ env.PODMAN_USER_VAR_DIR_PARENT }}""
           fi
       - name: Run packagetool.sh
         run: ./packagetool.sh --container_runtime=podman --package_system=apk --print_temp_dir=normal
