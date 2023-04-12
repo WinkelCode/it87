@@ -9,6 +9,9 @@ jobs:
       - name: Get current week of the year
         id: current_week_number
         run: printf 'WEEK_NUMBER=%s' "$(date +%V)" | tee -a "$GITHUB_OUTPUT"
+      - name: Get current year and week
+        id: current_year_and_week
+        run: printf 'YEAR_AND_WEEK=%s' "$(date +Y%YW%V)" | tee -a "$GITHUB_OUTPUT"
       - name: Get Podman user var directory
         id: podman_user_var_dir
         run: printf 'PODMAN_USER_VAR_DIR=%s' "$(podman info --format '{{.Store.GraphRoot}}' | sed 's|/[^/]*$|/|')" | tee -a "$GITHUB_OUTPUT"
