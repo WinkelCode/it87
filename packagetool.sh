@@ -193,7 +193,7 @@ RUN sed -i '/--proc \/proc \\/d' /usr/libexec/akms/akms-runas
 RUN printf '%s\n' "$(ls /lib/modules/ | head -n 1)" >/kernel_dev_name.txt
 EOF
 )
-	printf '%s\n' "${containerfile}" | ${container_runtime} build -t ${software_name}-apk-builder -f - # Build the container
+	printf '%s\n' "${containerfile}" | ${container_runtime} build -t ${software_name}-apk-builder -f - . # Build the container
 
 	mkdir -p "${temp_dir}/"{APKBUILD/src,packages} # Create the shared directories
 	container_mounts=(
@@ -295,7 +295,7 @@ RUN printf '%s\n' "$(ls /lib/modules/ | head -n 1)" >/kernel_dev_name.txt
 RUN rpmdev-setuptree
 EOF
 )
-	printf '%s\n' "${containerfile}" | ${container_runtime} build -t ${software_name}-rpm-builder -f - # Build the container
+	printf '%s\n' "${containerfile}" | ${container_runtime} build -t ${software_name}-rpm-builder -f - . # Build the container
 
 	mkdir -p "${temp_dir}/"{SOURCES,SPECS,RPMS,SRPMS} # Create shared build directories in temp dir
 	container_mounts=(
@@ -363,7 +363,7 @@ RUN apt-get update && apt-get install -y \
 RUN printf '%s\n' "$(ls /lib/modules/ | head -n 1)" >/kernel_dev_name.txt
 EOF
 )
-	printf '%s\n' "${containerfile}" | ${container_runtime} build -t ${software_name}-deb-builder -f -
+	printf '%s\n' "${containerfile}" | ${container_runtime} build -t ${software_name}-deb-builder -f - .
 	
 	cp -r "../${PWD##*/}" "${temp_dir}/${software_name}"
 	container_mounts=(
