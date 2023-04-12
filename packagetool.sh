@@ -284,6 +284,10 @@ RUN microdnf install -y \
 	akmods \
 	dnf
 
+# DEV: /usr/libexec/akms/akms-runas
+# Delete line with `--dev-bind /dev /dev \`
+RUN sed -i '/--dev-bind \/dev \/dev \\/d' /usr/libexec/akms/akms-runas
+
 # Save kernel dev name
 RUN printf '%s\n' "$(ls /lib/modules/ | head -n 1)" >/kernel_dev_name.txt
 
