@@ -6,23 +6,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Get current week number
+      - name: Get current week of the year
         id: current_week_number
         run: echo "WEEK_NUMBER=$(date +%V)" >>"$GITHUB_OUTPUT"
-      - name: Echo current week number
-        run: echo "${{ steps.current_week_number.outputs.WEEK_NUMBER }}"
+      - name: Set /var/lib/containers permissions
+        run: sudo chown -R $USER:$USER /var/lib/containers
       - name: Restore /var/lib/containers cache
         uses: actions/cache@v3
         with:
           path: /var/lib/containers
-          key: containers-${{ steps.get-current-week-number.outputs.WEEK_NUMBER }}
+          key: containers-${{ steps.current_week_number.outputs.WEEK_NUMBER }}
       - name: Run packagetool.sh
         run: ./packagetool.sh --container_runtime=podman --package_system=apk --print_temp_dir=normal
-      - name: Save /var/lib/containers cache
-        uses: actions/cache@v3
-        with:
-          path: /var/lib/containers
-          key: containers-${{ steps.get-current-week-number.outputs.WEEK_NUMBER }}
       - name: Upload .release folder as artifact
         uses: actions/upload-artifact@v3
         with:
