@@ -16,7 +16,7 @@ jobs:
           path: /var/lib/containers
           key: containers-${{ steps.get-current-week-number.outputs.WEEK_NUMBER }} # This will use the output of the previous step to create a cache key that expires every week. [3, 4]
       - name: Run packagetool.sh
-        run: ./packagetool.sh --container_runtime=podman --package_system=apk --print_temp_dir=normal # This will run the script from the root of the repo. [2]
+        run: ./packagetool.sh --container_runtime=podman --package_system=deb --print_temp_dir=normal # This will run the script from the root of the repo. [2]
       # - name: Save /var/lib/containers cache
       #   uses: actions/cache@v3 # This will use the cache action to save the cache for /var/lib/containers. [3]
       #   with:
