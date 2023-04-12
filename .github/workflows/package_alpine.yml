@@ -9,9 +9,10 @@ jobs:
       # - name: Elevate permissions
       #   run: sudo su 
       - name: Get current week number
-        run: echo "WEEK_NUMBER=$(date +%V)" >>$GITHUB_OUTPUT # This will get the number of the current week and set it as an output variable. [2]
+        id: current_week_number
+        run: echo "WEEK_NUMBER=$(date +%V)" >>"$GITHUB_OUTPUT" # This will get the number of the current week and set it as an output variable. [2]
       - name: Echo current week number
-        run: echo "${{ steps.get-current-week-number.outputs.WEEK_NUMBER }}"
+        run: echo "${{ steps.current_week_number.outputs.WEEK_NUMBER }}"; echo "$GITHUB_OUTPUT"
       # - name: Restore /var/lib/containers cache
       #   uses: actions/cache@v3 # This will use the cache action to restore or create a cache for /var/lib/containers. [3]
       #   with:
