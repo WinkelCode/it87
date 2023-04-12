@@ -12,11 +12,11 @@ jobs:
       - name: Get Podman user var directory
         id: podman_user_var_dir
         run: printf 'PODMAN_USER_VAR_DIR=%s' "$(podman info --format '{{.Store.GraphRoot}}' | sed 's|/[^/]*$|/|')" | tee -a "$GITHUB_OUTPUT"
-      - name: GitHub Actions Cache '${{ steps.podman_user_var_dir.outputs.PODMAN_USER_VAR_DIR }}'
-        uses: actions/cache@v3
-        with:
-          path: ${{ steps.podman_user_var_dir.outputs.PODMAN_USER_VAR_DIR }}
-          key: containers-${{ steps.current_week_number.outputs.WEEK_NUMBER }}
+      # - name: GitHub Actions Cache '${{ steps.podman_user_var_dir.outputs.PODMAN_USER_VAR_DIR }}'
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: ${{ steps.podman_user_var_dir.outputs.PODMAN_USER_VAR_DIR }}
+      #     key: containers-${{ steps.current_week_number.outputs.WEEK_NUMBER }}
       - name: Run packagetool.sh
         run: ./packagetool.sh --container_runtime=podman --package_system=apk --print_temp_dir=normal
       - name: Upload .release folder as artifact
