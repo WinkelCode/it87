@@ -185,6 +185,8 @@ RUN apk add \
 	linux-lts-dev \
 	akms
 
+RUN sed -i '/--proc \/proc \\/d' /usr/libexec/akms/akms-runas
+
 # Save kernel dev name
 RUN printf '%s\n' "$(ls /lib/modules/ | head -n 1)" >/kernel_dev_name.txt
 EOF
@@ -283,10 +285,6 @@ RUN microdnf install -y \
 	kernel-devel \
 	akmods \
 	dnf
-
-# DEV: /usr/libexec/akms/akms-runas
-# Delete line with `--dev-bind /dev /dev \`
-RUN sed -i '/--dev-bind \/dev \/dev \\/d' /usr/libexec/akms/akms-runas
 
 # Save kernel dev name
 RUN printf '%s\n' "$(ls /lib/modules/ | head -n 1)" >/kernel_dev_name.txt
