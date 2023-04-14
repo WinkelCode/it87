@@ -13,6 +13,7 @@ jobs:
         id: jobenv
         run: |
           sudo su
+          docker buildx create --use --driver=docker-container
           mkdir -p "${{ env.DOCKER_CACHE_DIR }}"
           printf 'CACHE_YEAR_AND_WEEK=%s\n' "$(date +Y%YW%V)" | tee -a "$GITHUB_OUTPUT"
       - name: GitHub Actions Cache for Docker
