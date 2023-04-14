@@ -1,6 +1,5 @@
 name: Test module for Debian & Derivatives/dkms
 
-
 on: workflow_dispatch
 jobs:
   packagetool:
@@ -20,9 +19,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ env.DOCKER_CACHE_DIR }}
-          key: docker-cache-${{ steps.jobenv.outputs.CACHE_YEAR_AND_WEEK }}
+          key: docker-cache-deb-${{ steps.jobenv.outputs.CACHE_YEAR_AND_WEEK }}
       - name: Run packagetool.sh
-        run: ./packagetool.sh --container_runtime=docker --package_system=apk --print_temp_dir=normal --container_security_privileged --keep_temp_dir --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}"
+        run: ./packagetool.sh --container_runtime=docker --package_system=deb --print_temp_dir=normal --container_security_privileged --keep_temp_dir --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}"
       - name: Upload .release folder as artifact
         uses: actions/upload-artifact@v3
         with:

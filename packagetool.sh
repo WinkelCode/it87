@@ -267,7 +267,7 @@ RUN apk add \
 
 # Remove /proc mount from akms-runas. This works around 'Can't mount proc on /newroot/proc: Operation not permitted' in GitHub Actions.
 # Not sure what/if it is needed for but it seems to not have any negative effects right now.
-RUN sed -i '/--proc \/proc \\/d' /usr/libexec/akms/akms-runas
+# RUN sed -i '/--proc \/proc \\/d' /usr/libexec/akms/akms-runas
 
 # Save kernel dev name
 RUN printf '%s\n' "$(ls /lib/modules/ | head -n 1)" >/kernel_dev_name.txt
