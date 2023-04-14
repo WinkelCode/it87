@@ -207,8 +207,8 @@ container_build_and_run() {
 	
 	build_opts=()
 	[ "$local_cache_dir" ] && [ "$container_runtime" == 'docker' ] && build_opts+=(
-		"--cache-from" "type=local,src=${local_cache_dir},compression=zstd"
-		"--cache-to" "type=local,dest=${local_cache_dir},mode=max,compression=zstd"
+		"--cache-from" "type=local,src=${local_cache_dir},compression=uncompressed" # GitHub actions cache always uses zstd compression, so we skip it here.
+		"--cache-to" "type=local,dest=${local_cache_dir},mode=max,compression=uncompressed"
 	)
 	run_opts=(${container_runtime_opts[@]})
 	[ "$inspect_container" ] && run_opts+=("-it")
