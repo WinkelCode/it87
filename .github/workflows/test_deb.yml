@@ -1,4 +1,4 @@
-name: Package module for Alpine Linux
+name: Test module for Debian & Derivatives/dkms
 
 
 on: workflow_dispatch
