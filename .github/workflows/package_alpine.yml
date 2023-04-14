@@ -22,7 +22,7 @@ jobs:
           path: ${{ env.DOCKER_CACHE_DIR }}
           key: containers-${{ steps.jobenv.outputs.CACHE_YEAR_AND_WEEK }}
       - name: Run packagetool.sh
-        run: ./packagetool.sh --container_runtime=docker --package_system=apk --print_temp_dir=normal --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}"
+        run: ./packagetool.sh --container_runtime=docker --package_system=apk --print_temp_dir=normal --container_security_privileged --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}"
       - name: Upload .release folder as artifact
         uses: actions/upload-artifact@v3
         with:
