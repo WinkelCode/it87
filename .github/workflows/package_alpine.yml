@@ -1,8 +1,11 @@
 name: Package module for Alpine Linux
 
+
 on: workflow_dispatch
 jobs:
   packagetool:
+    env:
+      DOCKER_CACHE_DIR: /tmp/gh_actions-docker_cache
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -10,28 +13,15 @@ jobs:
         id: jobenv
         run: |
           sudo su
-          PODMAN_USER_VAR_DIR="$(printf '%s' "$(podman info --format '{{.Store.GraphRoot}}' | sed 's|/[^/]*$|/|')")"
-          PODMAN_USER_VAR_DIR_PARENT="$(printf '%s' "$PODMAN_USER_VAR_DIR" | sed 's|/[^/]*/$|/|')"
-          printf 'PODMAN_USER_VAR_DIR=%s\n' "$PODMAN_USER_VAR_DIR" | tee -a "$GITHUB_OUTPUT"
-          printf 'PODMAN_USER_VAR_DIR_PARENT=%s\n' "$PODMAN_USER_VAR_DIR_PARENT" | tee -a "$GITHUB_OUTPUT"
+          mkdir -p "${{ env.DOCKER_CACHE_DIR }}"
           printf 'CACHE_YEAR_AND_WEEK=%s\n' "$(date +Y%YW%V)" | tee -a "$GITHUB_OUTPUT"
-      - name: GitHub Actions Cache Podman var directory
+      - name: GitHub Actions Cache for Docker
         uses: actions/cache@v3
         with:
-          path: ${{ steps.jobenv.outputs.PODMAN_USER_VAR_DIR_PARENT }}containers.tar.gz
+          path: ${{ env.DOCKER_CACHE_DIR }}
           key: containers-${{ steps.jobenv.outputs.CACHE_YEAR_AND_WEEK }}
-      # - name: Install cached Podman directory
-      #   run: |
-      #     if [ -f "${{ steps.jobenv.outputs.PODMAN_USER_VAR_DIR_PARENT }}containers.tar.gz" ]; then
-      #       printf '%s\n' "Detected Podman var archive, restoring it..."
-      #       rm -rf "${{ steps.jobenv.outputs.PODMAN_USER_VAR_DIR }}"
-      #       tar xzvf "${{ steps.jobenv.outputs.PODMAN_USER_VAR_DIR_PARENT }}containers.tar.gz" -C "${{ steps.jobenv.outputs.PODMAN_USER_VAR_DIR_PARENT }}"
-      #     fi
       - name: Run packagetool.sh
-        run: ./packagetool.sh --container_runtime=docker --package_system=apk --print_temp_dir=normal
-      # - name: Save Podman var directory
-      #   run: |
-      #     tar czf "${{ steps.jobenv.outputs.PODMAN_USER_VAR_DIR_PARENT }}containers.tar.gz" -C "${{ steps.jobenv.outputs.PODMAN_USER_VAR_DIR_PARENT }}" containers
+        run: ./packagetool.sh --container_runtime=docker --package_system=apk --print_temp_dir=normal --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}"
       - name: Upload .release folder as artifact
         uses: actions/upload-artifact@v3
         with:

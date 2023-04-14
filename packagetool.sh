@@ -13,13 +13,19 @@ Options:
 		Container runtime to use. Valid values are 'podman' and 'docker'.
 	(Required) --package_system=PACKAGE_SYSTEM
 		Package system to target. Valid values are 'apk', 'deb', and 'rpm'.
-	(Optional) --software_name=SOFTWARE_NAME
-		Name of the software to package. Defaults to the name of the current directory ('${PWD##*/}').
 	(Optional) --no_pkg_tests
 		Do not test installation and dynamic build of the package.
 	(Optional) --inspect_container
 		Inspect the container with a shell after building (and testing) the package.
 		Note: 'exit'-ing the container with a non-zero exit code will stop the script as well.
+	(Optional) --container_security_privileged
+		Run the container with the '--privileged' flag. Primarily needed by Docker for package tests.
+		TODO: More granular privileges
+	(Optional) --software_name=SOFTWARE_NAME
+		Name of the software to package. Defaults to the name of the current directory ('${PWD##*/}').
+	(Optional) --local_cache_dir=LOCAL_CACHE_DIR
+		Directory to use as a local cache for the build process.
+		Only works with 'docker' as the container runtime.
 	(Optional) --print_repo_info
 		Print information about the current repository and exit.
 	(Optional) --keep_temp_dir
@@ -58,16 +64,28 @@ parse_arguments() {
 				fi
 				shift
 				;;
-			--software_name=*)
-				software_name="${1#*=}"
-				shift
-				;;
 			--no_pkg_tests)
-				no_pkg_tests='true'
+				container_run_pkg_tests='false'
 				shift
 				;;
 			--inspect_container)
 				inspect_container='true'
+				shift
+				;;
+			--container_security_privileged)
+				container_security_privileged='true'
+				shift
+				;;
+			--software_name=*)
+				software_name="${1#*=}"
+				[ -z "$software_name" ] && { printf '%s\n' "Error: No value specified for SOFTWARE_NAME"; exit 1; }
+				shift
+				;;
+			--local_cache_dir=*)
+				local_cache_dir="${1#*=}"
+				[ "$local_cache_dir" ] || { printf '%s\n' "Error: No value specified for LOCAL_CACHE_DIR"; exit 1; }
+				[ -d "$local_cache_dir" ] || { printf '%s\n' "Error: LOCAL_CACHE_DIR '$local_cache_dir' doesn't exist or isn't a directory"; exit 1; }
+				[ -w "$local_cache_dir" ] || { printf '%s\n' "Error: LOCAL_CACHE_DIR '$local_cache_dir' isn't writable"; exit 1; }
 				shift
 				;;
 			--print_repo_info)
@@ -80,9 +98,10 @@ parse_arguments() {
 				;;
 			--print_temp_dir=*)
 				print_temp_dir="${1#*=}"
+				[ "$print_temp_dir" ] || { printf '%s\n' "Error: No value specified for PRINT_TEMP_DIR"; exit 1; }
 				valid_print_temp_dir='(none|normal|verbose)'
 				if [[ ! "$print_temp_dir" =~ ^${valid_print_temp_dir}$ ]]; then
-					printf '%s\n' "Error: Invalid print_temp_dir '$print_temp_dir', must be one of '$valid_print_temp_dir'"
+					printf '%s\n' "Error: Invalid PRINT_TEMP_DIR '$print_temp_dir', must be one of '$valid_print_temp_dir'"
 					exit 1
 				fi
 				shift
@@ -103,6 +122,7 @@ parse_arguments() {
 		esac
 	done
 
+	# Verify required options and combinations
 	required_options=(
 	"container_runtime"
 	"package_system"
@@ -115,6 +135,16 @@ parse_arguments() {
 			exit 1
 		fi
 	done
+
+	if [ "$local_cache_dir" ] && [ "$container_runtime" != 'docker' ]; then
+		print_usage
+		printf '%s\n' "Error: LOCAL_CACHE_DIR requires 'docker' container runtime"
+		exit 1
+	fi
+
+	if [ ! "$container_run_pkg_tests" ]; then
+		container_run_pkg_tests='true'
+	fi
 }
 
 gather_repo_info() {
@@ -150,6 +180,7 @@ startup() {
 	printf '%s' "Deleting old .release/ folder and creating temporary directory..."
 	rm -rf "./.release/" || { printf '\n%s\n' "Error: Failed to delete previous release directory."; exit 1; }
 	temp_dir="$(mktemp -t --directory ${software_name}_tmp.XXXXXXXXXX)" || { printf '\n%s\n' "Error: Failed to create temporary directory."; exit 1; }
+	[ "$local_cache_dir" ] && { [ -d "$local_cache_dir" ] || mkdir -p "$local_cache_dir" || { printf '\n%s\n' "Error: Error creating local cache directory: '$local_cache_dir'"; exit 1; } }
 	printf '%s\n' " OK."
 }
 
@@ -170,38 +201,40 @@ cleanup() {
 	fi
 }
 
+container_build_and_run() {
+	container_name="${1}"
+	container_run_command="${2}"
+	
+	build_opts=()
+	[ "$local_cache_dir" ] && [ "$container_runtime" == 'docker' ] && build_opts+=(
+		"--cache-from" "type=local,src=${local_cache_dir},compression=zstd"
+		"--cache-to" "type=local,dest=${local_cache_dir},mode=max,compression=zstd"
+	)
+	run_opts=(${container_runtime_opts[@]})
+	[ "$inspect_container" ] && run_opts+=("-it")
+	[ "$container_security_privileged" ] && run_opts+=("--privileged")
+
+	case "$container_runtime" in
+		podman)
+			printf '%s\n' "${containerfile}" | podman build ${build_opts[@]} --tag "${container_name}" --file - ${temp_dir} ||
+				{ printf '%s\n' "Error: Failed to build '${container_name}' image."; exit 1; }
+			podman run ${run_opts[@]} --rm "${container_name}" ${container_run_command} ||
+				{ printf '%s\n' "Error: '${container_name}' exited with non-zero status '$?'. Aborting."; exit 1; }
+			;;
+		docker)
+			printf '%s\n' "${containerfile}" | docker buildx build ${build_opts[@]} --load --tag "${container_name}" --file - ${temp_dir} ||
+				{ printf '%s\n' "Error: Failed to build '${container_name}' image."; exit 1; }
+			docker run ${run_opts[@]} --rm "${container_name}" ${container_run_command} ||
+				{ printf '%s\n' "Error: '${container_name}' exited with non-zero status '$?'. Aborting."; exit 1; }
+			;;
+	esac
+}
 
 # -------------------
 # Packaging functions
 # -------------------
 build_apk() {
-	containerfile=$(cat <<'EOF'
-FROM docker.io/library/alpine:latest
-
-# Install the build dependencies
-RUN apk add \
-	abuild \
-	build-base \
-	linux-lts-dev \
-	akms
-
-# Remove /proc mount from akms-runas. This works around 'Can't mount proc on /newroot/proc: Operation not permitted' in GitHub Actions.
-# Not sure what/if it is needed for but it seems to not have any negative effects right now.
-RUN sed -i '/--proc \/proc \\/d' /usr/libexec/akms/akms-runas
-
-# Save kernel dev name
-RUN printf '%s\n' "$(ls /lib/modules/ | head -n 1)" >/kernel_dev_name.txt
-EOF
-)
-	printf '%s\n' "${containerfile}" | ${container_runtime} build -t ${software_name}-apk-builder -f - . # Build the container
-
 	mkdir -p "${temp_dir}/"{APKBUILD/src,packages} # Create the shared directories
-	container_mounts=(
-		"--mount type=bind,source=${temp_dir}/APKBUILD,target=/APKBUILD"
-		"--mount type=bind,source=${temp_dir}/packages,target=/root/packages"
-		"--mount type=bind,source=${temp_dir}/run_command.sh,target=/run_command.sh"
-	)
-
 	build_overrides=(
 		"_source_modname=\"${software_name}\""
 		"_repo_name=\"${origin_name}\""
@@ -215,7 +248,37 @@ EOF
 
 	tar --exclude="../${PWD##*/}/.git" -czvf "${temp_dir}/APKBUILD/${origin_name}.tar.gz" "../${PWD##*/}" # Create the source tarball, for compatibility with GitHub tarballs we put the repo in a subdirectory of the tarball
 
-	run_command=(
+	containerfile="$(cat <<'EOF'
+FROM docker.io/library/alpine:latest
+
+# Install the build dependencies
+RUN apk add \
+	abuild \
+	build-base
+EOF
+)"
+	containerfile_test="$(cat <<'EOF'
+
+
+# Install the test dependencies
+RUN apk add \
+	linux-lts-dev \
+	akms
+
+# Remove /proc mount from akms-runas. This works around 'Can't mount proc on /newroot/proc: Operation not permitted' in GitHub Actions.
+# Not sure what/if it is needed for but it seems to not have any negative effects right now.
+RUN sed -i '/--proc \/proc \\/d' /usr/libexec/akms/akms-runas
+
+# Save kernel dev name
+RUN printf '%s\n' "$(ls /lib/modules/ | head -n 1)" >/kernel_dev_name.txt
+EOF
+)"
+	container_runtime_opts=(
+		"--mount type=bind,source=${temp_dir}/APKBUILD,target=/APKBUILD"
+		"--mount type=bind,source=${temp_dir}/packages,target=/root/packages"
+		"--mount type=bind,source=${temp_dir}/run_script.sh,target=/run_script.sh"
+	)
+	container_run_script=(
 		"("
 		"cd /APKBUILD"
 		"&& abuild-keygen -a -n" # We can't not sign the package, so we generate a one time use key, the user has to install it with `--allow-untrusted`
@@ -225,8 +288,9 @@ EOF
 		")"
 		"&& printf '%s\n' '-> Package building complete.'"
 	)
-	if [ "$no_pkg_tests" != 'true' ]; then # Testing installing the package and akmod dynamic builds
-		run_command+=(
+	if [ "$container_run_pkg_tests" == 'true' ]; then # Testing installing the package and akmod dynamic builds
+		containerfile="${containerfile}${containerfile_test}" # Append the test setup and dependencies
+		container_run_script+=(
 			"&& apk add --allow-untrusted /root/packages/*/*.apk"
 			"&& akms --kernel \$(cat /kernel_dev_name.txt) build ${software_name}-oot"
 			"&& akms --kernel \$(cat /kernel_dev_name.txt) install ${software_name}-oot"
@@ -238,16 +302,21 @@ EOF
 		)
 	fi
 	if [ "$inspect_container" == 'true' ]; then
-		run_command+=(
+		container_run_script+=(
 			"; printf '%s\n' '-> Dropping into container shell.'"
 			"; ash"
 		)
 	fi
-	install -D -m 0755 <(printf '%s\n\n%s\n' '#!/bin/sh' "${run_command[*]}") "${temp_dir}/run_command.sh"
+	install -D -m 0755 <(printf '%s\n\n%s\n' '#!/bin/sh' "${container_run_script[*]}") "${temp_dir}/run_script.sh" # Write the run command
 
-	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-apk-builder ash -c "/run_command.sh" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
+	if [ "$container_run_pkg_tests" == 'true' ]; then
+		container_build_and_run "${software_name}-apk-build-and-test" "/run_script.sh"
+	else
+		container_build_and_run "${software_name}-apk-build" "/run_script.sh"
+	fi
 
-	mkdir -p "./.release/" # Copy out the built packages
+	# Copy out the built packages
+	mkdir -p "./.release/"
 	cp "${temp_dir}/packages/"*/*.apk "./.release/"
 
 	# Copy akms files for manual install
@@ -273,39 +342,7 @@ EOF
 }
 
 build_rpm() {
-	containerfile=$(cat <<'EOF'
-FROM registry.fedoraproject.org/fedora-minimal:latest
-
-# Install the build dependencies
-# Note: Unlike with Alpine, we can't get away with only the -dev(el) package, we need the full kernel package.
-# TODO: Unfortunately we need the full 'kernel' package for build testing, maybe there is a way to reliably install it without dependencies?
-# DNF is needed by akmods to install the resulting package.
-RUN microdnf install -y \
-	rpmdevtools \
-	kmodtool \
-	kernel \
-	kernel-devel \
-	akmods \
-	dnf
-
-# Save kernel dev name
-RUN printf '%s\n' "$(ls /lib/modules/ | head -n 1)" >/kernel_dev_name.txt
-
-# Create the rpmbuild directory structure
-RUN rpmdev-setuptree
-EOF
-)
-	printf '%s\n' "${containerfile}" | ${container_runtime} build -t ${software_name}-rpm-builder -f - . # Build the container
-
 	mkdir -p "${temp_dir}/"{SOURCES,SPECS,RPMS,SRPMS} # Create shared build directories in temp dir
-	container_mounts=(
-		"--mount type=bind,source=${temp_dir}/SOURCES,target=/root/rpmbuild/SOURCES"
-		"--mount type=bind,source=${temp_dir}/SPECS,target=/root/rpmbuild/SPECS"
-		"--mount type=bind,source=${temp_dir}/RPMS,target=/root/rpmbuild/RPMS"
-		"--mount type=bind,source=${temp_dir}/SRPMS,target=/root/rpmbuild/SRPMS"
-		"--mount type=bind,source=${temp_dir}/run_command.sh,target=/run_command.sh"
-	)
-
 	spec_overrides=(
 		"%global source_modname ${software_name}"
 		"%global repo_name ${origin_name}"
@@ -321,12 +358,49 @@ EOF
 
 	tar --exclude="../${PWD##*/}/.git" -czvf "${temp_dir}/SOURCES/${origin_name}.tar.gz" "../${PWD##*/}" # The spec files expect the sources in a subdirectory of the archive (as with GitHub tarballs)
 
-	run_command=(
+	containerfile="$(cat <<'EOF'
+FROM registry.fedoraproject.org/fedora-minimal:latest
+
+# Install the build dependencies
+RUN microdnf install -y \
+	rpmdevtools \
+	kmodtool
+
+# Create the rpmbuild directory structure
+RUN rpmdev-setuptree
+EOF
+)"
+	containerfile_test="$(cat <<'EOF'
+
+
+# Install the test dependencies
+# Note: Unlike with Alpine, we can't get away with only the -dev(el) package, we need the full kernel package.
+# TODO: Unfortunately we need the full 'kernel' package for build testing, maybe there is a way to reliably install it without dependencies?
+# DNF is needed by akmods to install the resulting package.
+RUN microdnf install -y \
+	kernel \
+	kernel-devel \
+	akmods \
+	dnf
+
+# Save kernel dev name
+RUN printf '%s\n' "$(ls /lib/modules/ | head -n 1)" >/kernel_dev_name.txt
+EOF
+)"
+	container_runtime_opts=(
+		"--mount type=bind,source=${temp_dir}/SOURCES,target=/root/rpmbuild/SOURCES"
+		"--mount type=bind,source=${temp_dir}/SPECS,target=/root/rpmbuild/SPECS"
+		"--mount type=bind,source=${temp_dir}/RPMS,target=/root/rpmbuild/RPMS"
+		"--mount type=bind,source=${temp_dir}/SRPMS,target=/root/rpmbuild/SRPMS"
+		"--mount type=bind,source=${temp_dir}/run_script.sh,target=/run_script.sh"
+	)
+	container_run_script=(
 		"rpmbuild -ba /root/rpmbuild/SPECS/*.spec"
 		"&& printf '%s\n' '-> Package building complete.'"
 	)
-	if [ "$no_pkg_tests" != 'true' ]; then # Testing installing the package and akms dynamic builds
-		run_command+=(
+	if [ "$container_run_pkg_tests" == 'true' ]; then # Testing installing the package and akms dynamic builds
+		containerfile="${containerfile}${containerfile_test}" # Append the test setup and dependencies
+		container_run_script+=(
 			"&& rpm --install /root/rpmbuild/RPMS/*/*.rpm"
 			"&& akmods --kernels \$(cat /kernel_dev_name.txt) --akmod ${software_name}-oot"
 			"&& modinfo /lib/modules/\$(cat /kernel_dev_name.txt)/extra/${software_name}-oot/${software_name}.ko*"
@@ -337,14 +411,18 @@ EOF
 		)
 	fi
 	if [ "$inspect_container" == 'true' ]; then
-		run_command+=(
+		container_run_script+=(
 			"; printf '%s\n' '-> Dropping into container shell.'"
 			"; bash"
 		)
 	fi
-	install -D -m 0755 <(printf '%s\n\n%s\n' '#!/bin/sh' "${run_command[*]}") "${temp_dir}/run_command.sh"
+	install -D -m 0755 <(printf '%s\n\n%s\n' '#!/bin/sh' "${container_run_script[*]}") "${temp_dir}/run_script.sh"
 
-	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-rpm-builder bash -c "/run_command.sh" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
+	if [ "$container_run_pkg_tests" == 'true' ]; then
+		container_build_and_run "${software_name}-rpm-build-and-test" "/run_script.sh"
+	else
+		container_build_and_run "${software_name}-rpm-build" "/run_script.sh"
+	fi
 
 	mkdir -p "./.release/"{SRPMS,RPMS}
 	cp "${temp_dir}/SRPMS/"*.src.rpm "./.release/SRPMS/"
@@ -352,34 +430,37 @@ EOF
 }
 
 build_deb() { # TODO: Support this packaging method like apk and rpm
-	containerfile=$(cat <<'EOF'
+	cp -r "../${PWD##*/}" "${temp_dir}/${software_name}"
+
+	containerfile="$(cat <<'EOF'
 FROM docker.io/library/debian:stable-slim
 
 RUN apt-get update && apt-get install -y \
 	debhelper \
 	dkms
+EOF
+)"
+	containerfile_test="$(cat <<'EOF'
 
+# Building the package already needs dkms for some reason, which includes the kernel dev stuff, so this is kind of pointless.
 # Save kernel dev name
 RUN printf '%s\n' "$(ls /lib/modules/ | head -n 1)" >/kernel_dev_name.txt
 EOF
-)
-	printf '%s\n' "${containerfile}" | ${container_runtime} build -t ${software_name}-deb-builder -f - .
-	
-	cp -r "../${PWD##*/}" "${temp_dir}/${software_name}"
-	container_mounts=(
+)"
+	container_runtime_opts=(
 		"--mount type=bind,source=${temp_dir}/,target=/root"
-		"--mount type=bind,source=${temp_dir}/run_command.sh,target=/run_command.sh"
+		"--mount type=bind,source=${temp_dir}/run_script.sh,target=/run_script.sh"
 	)
-
-	run_command=(
+	container_run_script=(
 		"("
 		"cd /root/${software_name}"
 		"&& dpkg-buildpackage --no-sign"
 		")"
 		"&& printf '%s\n' '-> Package building complete.'"
 	)
-	if [ "$no_pkg_tests" != 'true' ]; then # Testing installing the package and dkms dynamic builds
-		run_command+=(
+	if [ "$container_run_pkg_tests" == 'true' ]; then # Testing installing the package and dkms dynamic builds
+		containerfile="${containerfile}${containerfile_test}" # Append the test setup and dependencies
+		container_run_script+=(
 			"&& dpkg --install /root/*.deb"
 			"&& modinfo /lib/modules/\$(cat /kernel_dev_name.txt)/updates/dkms/${software_name}.ko*"
 			"&& printf '%s\n' '-> Checking if module is removed on package uninstall.'"
@@ -389,14 +470,18 @@ EOF
 		)
 	fi
 	if [ "$inspect_container" == 'true' ]; then
-		run_command+=(
+		container_run_script+=(
 			"; printf '%s\n' '-> Dropping into container shell.'"
 			"; bash"
 		)
 	fi
-	install -D -m 0755 <(printf '%s\n\n%s\n' '#!/bin/sh' "${run_command[*]}") "${temp_dir}/run_command.sh"
-	
-	${container_runtime} run --rm -it ${container_mounts[@]} ${software_name}-deb-builder bash -c "${run_command[*]}" || { printf '%s\n' "Error: Container exited with non-zero status '$?'"; exit 1; }
+	install -D -m 0755 <(printf '%s\n\n%s\n' '#!/bin/sh' "${container_run_script[*]}") "${temp_dir}/run_script.sh"
+
+	if [ "$container_run_pkg_tests" == 'true' ]; then
+		container_build_and_run "${software_name}-deb-build-and-test" "/run_script.sh"
+	else
+		container_build_and_run "${software_name}-deb-build" "/run_script.sh"
+	fi	
 
 	mkdir -p "./.release/"
 	cp "${temp_dir}/"*.deb "./.release/"
