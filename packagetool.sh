@@ -267,6 +267,7 @@ RUN apk add \
 
 # Remove /proc mount from akms-runas. This works around 'Can't mount proc on /newroot/proc: Operation not permitted' in GitHub Actions.
 # Not sure what/if it is needed for but it seems to not have any negative effects right now.
+# Update: This removes the --privileged requirement for Podman, but Docker needs --privileged regardless. For now it's commented out and we will be using --privileged for any bwrap related-issues.
 # RUN sed -i '/--proc \/proc \\/d' /usr/libexec/akms/akms-runas
 
 # Save kernel dev name
