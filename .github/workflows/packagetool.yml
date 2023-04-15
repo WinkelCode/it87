@@ -21,7 +21,11 @@ on:
       package_system:
         description: 'The package system to use'
         required: true
-        type: string
+        type: choice
+        choices:
+          - 'apk'
+          - 'deb'
+          - 'rpm'
       run_tests:
         description: 'Run tests after building the package'
         required: false
