@@ -14,4 +14,4 @@ jobs:
     steps:
       - name: "TESTING"
         run: |
-        ${{ env.STD_ENV_COMMAND }} --test
+          ${{ env.STD_ENV_COMMAND }} --test
