@@ -22,7 +22,7 @@ on:
         description: 'The package system to use'
         required: true
         type: choice
-        choices:
+        options:
           - 'apk'
           - 'deb'
           - 'rpm'
