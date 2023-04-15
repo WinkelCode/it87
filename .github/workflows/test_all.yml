@@ -1,0 +1,19 @@
+name: Test packaging and dynamic building of the module
+
+on: workflow_dispatch
+
+env:
+  DOCKER_CACHE_DIR: /tmp/GitHubActions-DockerCache
+  STD_ENV_COMMAND: |
+    docker buildx create --use --driver=docker-container &&
+    mkdir -p "${{ env.DOCKER_CACHE_DIR }}" &&
+    printf 'CACHE_YEAR_AND_WEEK=%s\n' "$(date +Y%YW%V)" | tee -a "$GITHUB_OUTPUT"
+    ./packagetool.sh --help
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "TESTING"
+        run: |
+        ${{ env.STD_ENV_COMMAND }} --test
