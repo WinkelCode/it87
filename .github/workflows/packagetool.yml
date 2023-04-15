@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PACKAGE_SYSTEM: ${{ inputs.package_system }}
-      DOCKER_CACHE_DIR: ${{ format('/tmp/GitHubActions-DockerCache-{0}', PACKAGE_SYSTEM) }}
+      DOCKER_CACHE_DIR: ${{ format('/tmp/GitHubActions-DockerCache-{0}', inputs.package_system) }}
     steps:
       - uses: actions/checkout@v3
       - name: Set up job environment
