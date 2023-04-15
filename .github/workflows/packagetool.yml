@@ -1,6 +1,22 @@
 name: Run packagetool for a specified package system
 on:
-  [workflow_dispatch,workflow_call]
+  workflow_call:
+    inputs:
+      package_system:
+        description: 'The package system to use'
+        required: true
+        type: string
+      run_tests:
+        description: 'Run tests after building the package'
+        required: false
+        default: true
+        type: boolean
+      produce_artifact:
+        description: 'Produce an artifact from the .release folder'
+        required: false
+        default: true
+        type: boolean
+  workflow_dispatch:
     inputs:
       package_system:
         description: 'The package system to use'
