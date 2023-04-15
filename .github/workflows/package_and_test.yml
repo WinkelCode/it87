@@ -2,7 +2,7 @@ name: Test packaging and dynamic building of the module
 on: workflow_dispatch
 jobs:
   apk:
-    uses: ./.github/workflows/packagetool.yml
+    uses: ./.github/workflows/packagetool.yml@main
     with:
       package_system: apk
       run_tests: true
