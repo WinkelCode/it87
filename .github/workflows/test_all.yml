@@ -10,7 +10,7 @@ env:
       --print_temp_dir=normal \
       --container_security_privileged \
       --local_cache_ci_mode \
-      --keep_temp_dir
+      --keep_temp_dir \
 jobs:
   apk:
     runs-on: ubuntu-latest
@@ -31,9 +31,7 @@ jobs:
       - name: Run packagetool.sh
         run: |
           mkdir -p "${{ env.DOCKER_CACHE_DIR }}"
-          ${{ env.STD_RUN_COMMAND }} \
-            --package_system=${{ env.PACKAGE_SYSTEM }} \
-            --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}"
+          ${{ env.STD_RUN_COMMAND }} --package_system=${{ env.PACKAGE_SYSTEM }} --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}"
       - name: Upload .release folder as artifact
         uses: actions/upload-artifact@v3
         with:
@@ -58,9 +56,7 @@ jobs:
       - name: Run packagetool.sh
         run: |
           mkdir -p "${{ env.DOCKER_CACHE_DIR }}"
-          ${{ env.STD_RUN_COMMAND }} \
-            --package_system=${{ env.PACKAGE_SYSTEM }} \
-            --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}"
+          ${{ env.STD_RUN_COMMAND }} --package_system=${{ env.PACKAGE_SYSTEM }} --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}"
       - name: Upload .release folder as artifact
         uses: actions/upload-artifact@v3
         with:
@@ -85,9 +81,7 @@ jobs:
       - name: Run packagetool.sh
         run: |
           mkdir -p "${{ env.DOCKER_CACHE_DIR }}"
-          ${{ env.STD_RUN_COMMAND }} \
-            --package_system=${{ env.PACKAGE_SYSTEM }} \
-            --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}"
+          ${{ env.STD_RUN_COMMAND }} --package_system=${{ env.PACKAGE_SYSTEM }} --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}"
       - name: Upload .release folder as artifact
         uses: actions/upload-artifact@v3
         with:
