@@ -1,4 +1,4 @@
-name: WIP: Automatic build and test
+name: 'WIP: Automatic build and test'
 on:
   workflow_dispatch:
 jobs:
