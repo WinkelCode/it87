@@ -1,7 +1,16 @@
 name: Test packaging and dynamic building of the module
 on: workflow_dispatch
 env:
-  DOCKER_CACHE_DIR: /tmp/GitHubActions-DockerCache
+  STD_ENV_COMMAND: |
+    printf 'CACHE_YEAR_AND_WEEK=%s\n' "$(date +Y%YW%V)" | tee -a "$GITHUB_OUTPUT"
+    docker buildx create --use --driver=docker-container
+  STD_RUN_COMMAND: |
+    ./packagetool.sh \
+      --container_runtime=docker \
+      --print_temp_dir=normal \
+      --container_security_privileged \
+      --local_cache_ci_mode \
+      --keep_temp_dir
 jobs:
   apk:
     runs-on: ubuntu-latest
@@ -13,9 +22,7 @@ jobs:
       - name: Set up job environment
         id: jobenv
         run: |
-          printf 'CACHE_YEAR_AND_WEEK=%s\n' "$(date +Y%YW%V)" | tee -a "$GITHUB_OUTPUT"
-          mkdir -p "${{ env.DOCKER_CACHE_DIR }}"
-          docker buildx create --use --driver=docker-container
+          ${{ env.STD_ENV_COMMAND }}
       - name: GitHub Actions Cache for Docker
         uses: actions/cache@v3
         with:
@@ -23,44 +30,9 @@ jobs:
           key: docker-cache-${{ env.PACKAGE_SYSTEM }}-${{ steps.jobenv.outputs.CACHE_YEAR_AND_WEEK }}
       - name: Run packagetool.sh
         run: |
-          ./packagetool.sh \
-            --container_runtime=docker \
-            --package_system=${{ env.PACKAGE_SYSTEM }} \
-            --print_temp_dir=normal \
-            --container_security_privileged \
-            --keep_temp_dir \
-            --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}"
-      - name: Upload .release folder as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: release-${{ env.PACKAGE_SYSTEM }}
-          path: ./.release
-  rpm:
-    runs-on: ubuntu-latest
-    env:
-      PACKAGE_SYSTEM: rpm
-      DOCKER_CACHE_DIR: /tmp/GitHubActions-DockerCache-rpm
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up job environment
-        id: jobenv
-        run: |
-          printf 'CACHE_YEAR_AND_WEEK=%s\n' "$(date +Y%YW%V)" | tee -a "$GITHUB_OUTPUT"
           mkdir -p "${{ env.DOCKER_CACHE_DIR }}"
-          docker buildx create --use --driver=docker-container
-      - name: GitHub Actions Cache for Docker
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.DOCKER_CACHE_DIR }}
-          key: docker-cache-${{ env.PACKAGE_SYSTEM }}-${{ steps.jobenv.outputs.CACHE_YEAR_AND_WEEK }}
-      - name: Run packagetool.sh
-        run: |
-          ./packagetool.sh \
-            --container_runtime=docker \
+          ${{ env.STD_RUN_COMMAND }} \
             --package_system=${{ env.PACKAGE_SYSTEM }} \
-            --print_temp_dir=normal \
-            --container_security_privileged \
-            --keep_temp_dir \
             --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}"
       - name: Upload .release folder as artifact
         uses: actions/upload-artifact@v3
@@ -77,9 +49,7 @@ jobs:
       - name: Set up job environment
         id: jobenv
         run: |
-          printf 'CACHE_YEAR_AND_WEEK=%s\n' "$(date +Y%YW%V)" | tee -a "$GITHUB_OUTPUT"
-          mkdir -p "${{ env.DOCKER_CACHE_DIR }}"
-          docker buildx create --use --driver=docker-container
+          ${{ env.STD_ENV_COMMAND }}
       - name: GitHub Actions Cache for Docker
         uses: actions/cache@v3
         with:
@@ -87,12 +57,36 @@ jobs:
           key: docker-cache-${{ env.PACKAGE_SYSTEM }}-${{ steps.jobenv.outputs.CACHE_YEAR_AND_WEEK }}
       - name: Run packagetool.sh
         run: |
-          ./packagetool.sh \
-            --container_runtime=docker \
+          mkdir -p "${{ env.DOCKER_CACHE_DIR }}"
+          ${{ env.STD_RUN_COMMAND }} \
             --package_system=${{ env.PACKAGE_SYSTEM }} \
-            --print_temp_dir=normal \
-            --container_security_privileged \
-            --keep_temp_dir \
+            --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}"
+      - name: Upload .release folder as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-${{ env.PACKAGE_SYSTEM }}
+          path: ./.release
+  rpm:
+    runs-on: ubuntu-latest
+    env:
+      PACKAGE_SYSTEM: rpm
+      DOCKER_CACHE_DIR: /tmp/GitHubActions-DockerCache-rpm
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up job environment
+        id: jobenv
+        run: |
+          ${{ env.STD_ENV_COMMAND }}
+      - name: GitHub Actions Cache for Docker
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.DOCKER_CACHE_DIR }}
+          key: docker-cache-${{ env.PACKAGE_SYSTEM }}-${{ steps.jobenv.outputs.CACHE_YEAR_AND_WEEK }}
+      - name: Run packagetool.sh
+        run: |
+          mkdir -p "${{ env.DOCKER_CACHE_DIR }}"
+          ${{ env.STD_RUN_COMMAND }} \
+            --package_system=${{ env.PACKAGE_SYSTEM }} \
             --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}"
       - name: Upload .release folder as artifact
         uses: actions/upload-artifact@v3
