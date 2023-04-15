@@ -9,6 +9,8 @@ print_usage() {
 	usage="$(cat <<EOF
 Usage: $0 [options]
 Options:
+	(Optional) --print_repo_info
+		Print detected information about the current repository and exit.
 	(Required) --container_runtime=CONTAINER_RUNTIME
 		Container runtime to use. Valid values are 'podman' and 'docker'.
 	(Required) --package_system=PACKAGE_SYSTEM
@@ -21,21 +23,24 @@ Options:
 	(Optional) --container_security_privileged
 		Run the container with the '--privileged' flag. Primarily needed by Docker for package tests.
 		TODO: More granular privileges
-	(Optional) --software_name=SOFTWARE_NAME
-		Name of the software to package. Defaults to the name of the current directory ('${PWD##*/}').
 	(Optional) --local_cache_dir=LOCAL_CACHE_DIR
 		Directory to use as a local cache for the build process.
+		Will be only used for saving if 'index.json' is not present in the directory.
 		Only works with 'docker' as the container runtime.
-	(Optional) --print_repo_info
-		Print information about the current repository and exit.
+	(Optional) --local_cache_ci_mode
+		* Only save cache if no cache exists ('index.json' not in directory).
+		Note: Very basic implementation, requires separate caches for different package systems.
 	(Optional) --keep_temp_dir
 		Do not delete the temporary directory after the script exits.
 	(Optional) --print_temp_dir=PRINT_TEMP_DIR
-		Print the path to the temporary directory and exit. Valid values are 'none', 'normal', and 'verbose'.
+		Print contents of the temporary directory when the script exits. Valid values are 'none', 'normal', and 'verbose'.
 		'none' is the default and prints nothing.
 		'normal' uses 'tree' or 'ls -R' to print the contents of the temporary directory.
 		'verbose' uses 'ls -laR' to print the contents of the temporary directory.
 		--print_temp_dir is equivalent to --print_temp_dir=normal.
+	(Optional) --software_name=SOFTWARE_NAME
+		Name of the software to package. Check --print_repo_info for the default value.
+		CAUTION: Likely to break things if changed, intended for correcting incorrect default value.
 	(Optional) --help, -h
 		Print this help message and exit.
 EOF
@@ -46,6 +51,10 @@ EOF
 parse_arguments() {
 	while [ "$1" ]; do
 		case "$1" in
+			--print_repo_info)
+				print_repo_info
+				exit 0
+				;;
 			--container_runtime=*)
 				container_runtime="${1#*=}"
 				valid_container_runtimes='(podman|docker)'
@@ -76,11 +85,6 @@ parse_arguments() {
 				container_security_privileged='true'
 				shift
 				;;
-			--software_name=*)
-				software_name="${1#*=}"
-				[ -z "$software_name" ] && { printf '%s\n' "Error: No value specified for SOFTWARE_NAME"; exit 1; }
-				shift
-				;;
 			--local_cache_dir=*)
 				local_cache_dir="${1#*=}"
 				[ "$local_cache_dir" ] || { printf '%s\n' "Error: No value specified for LOCAL_CACHE_DIR"; exit 1; }
@@ -88,9 +92,9 @@ parse_arguments() {
 				[ -w "$local_cache_dir" ] || { printf '%s\n' "Error: LOCAL_CACHE_DIR '$local_cache_dir' isn't writable"; exit 1; }
 				shift
 				;;
-			--print_repo_info)
-				print_repo_info
-				exit 0
+			--local_cache_ci_mode)
+				local_cache_ci_mode='true'
+				shift
 				;;
 			--keep_temp_dir)
 				keep_temp_dir='true'
@@ -108,6 +112,11 @@ parse_arguments() {
 				;;
 			--print_temp_dir)
 				print_temp_dir='normal'
+				shift
+				;;
+			--software_name=*)
+				software_name="${1#*=}"
+				[ -z "$software_name" ] && { printf '%s\n' "Error: No value specified for SOFTWARE_NAME"; exit 1; }
 				shift
 				;;
 			--help|-h)
@@ -142,6 +151,12 @@ parse_arguments() {
 		exit 1
 	fi
 
+	if [ "$local_cache_ci_mode" ] && [ ! "$local_cache_dir" ]; then
+		print_usage
+		printf '%s\n' "Error: LOCAL_CACHE_CI_MODE requires LOCAL_CACHE_DIR"
+		exit 1
+	fi
+
 	if [ ! "$container_run_pkg_tests" ]; then
 		container_run_pkg_tests='true'
 	fi
@@ -165,7 +180,7 @@ gather_repo_info() {
 }
 
 print_repo_info() {
-	printf '%s\n' "Determined the following information about the current repository:"
+	printf '%s\n' "-> Determined the following information about the current repository:"
 	printf '\t%s:%s\n' \
 		"software_name" "$software_name" \
 		"current_commit" "$current_commit" \
@@ -177,7 +192,7 @@ print_repo_info() {
 }
 
 startup() {
-	printf '%s' "Deleting old .release/ folder and creating temporary directory..."
+	printf '%s' "-> Deleting old .release/ folder and creating temporary directory..."
 	rm -rf "./.release/" || { printf '\n%s\n' "Error: Failed to delete previous release directory."; exit 1; }
 	temp_dir="$(mktemp -t --directory ${software_name}_tmp.XXXXXXXXXX)" || { printf '\n%s\n' "Error: Failed to create temporary directory."; exit 1; }
 	[ "$local_cache_dir" ] && { [ -d "$local_cache_dir" ] || mkdir -p "$local_cache_dir" || { printf '\n%s\n' "Error: Error creating local cache directory: '$local_cache_dir'"; exit 1; } }
@@ -186,19 +201,20 @@ startup() {
 
 cleanup() {
 	if [ "$print_temp_dir" == 'normal' ]; then
-		printf '%s\n' "Contents of temporary directory at '${temp_dir}' ('normal' verbosity):"
+		printf '%s\n' "-> Contents of temporary directory at '${temp_dir}' ('normal' verbosity):"
 		tree "${temp_dir}" 2>/dev/null || ls -R "${temp_dir}"
 	elif [ "$print_temp_dir" == 'verbose' ]; then
-		printf '%s\n' "Contents of temporary directory at '${temp_dir}' ('verbose' verbosity):"
+		printf '%s\n' "-> Contents of temporary directory at '${temp_dir}' ('verbose' verbosity):"
 		ls -laR "${temp_dir}"
 	fi
 	if [ "$keep_temp_dir" == 'true' ]; then
-		printf '%s\n' "Not removing '${temp_dir}' as per '--keep_temp_dir'."
+		printf '%s\n' "-> Not removing '${temp_dir}' as per '--keep_temp_dir'."
 	else 
-		printf '%s' "Deleting temporary directory at '${temp_dir}'..."
+		printf '%s' "-> Deleting temporary directory at '${temp_dir}'..."
 		rm -rf "${temp_dir}" || { printf '\n%s\n' "Error: Failed to delete temporary directory."; exit 1; }
 		printf '%s\n' " OK."
 	fi
+	echo "-> Program completed successfully"; exit 0
 }
 
 container_build_and_run() {
@@ -206,10 +222,17 @@ container_build_and_run() {
 	container_run_command="${2}"
 	
 	build_opts=()
-	[ "$local_cache_dir" ] && [ "$container_runtime" == 'docker' ] && build_opts+=(
-		"--cache-from" "type=local,src=${local_cache_dir},compression=uncompressed" # GitHub actions cache always uses zstd compression, so we skip it here.
-		"--cache-to" "type=local,dest=${local_cache_dir},mode=max,compression=uncompressed"
-	)
+	if [ "$local_cache_dir" ] && [ "$container_runtime" == 'docker' ]; then
+		if [ -f "${local_cache_dir}/index.json" ]; then # Only trying to load if the cache is not empty.
+			printf '%s\n' "-> Will try to load from local container build cache at '${local_cache_dir}'."
+			build_opts+=("--cache-from" "type=local,src=${local_cache_dir},compression=uncompressed") # GitHub actions cache always uses zstd compression, so we skip it here.
+		fi
+		if [ "$local_cache_ci_mode" != 'true' ] || [ ! -f "${local_cache_dir}/index.json" ]; then # If CI mode is NOT enabled, we always save to the cache, if CI mode is enabled, we only save if it's empty.
+			printf '%s\n' "-> Will try to save to local container build cache at '${local_cache_dir}'."
+			build_opts+=("--cache-to" "type=local,dest=${local_cache_dir},mode=max,compression=uncompressed")
+		fi
+	fi
+
 	run_opts=(${container_runtime_opts[@]})
 	[ "$inspect_container" ] && run_opts+=("-it")
 	[ "$container_security_privileged" ] && run_opts+=("--privileged")
@@ -514,5 +537,3 @@ case "$package_system" in
 		exit 1
 		;;
 esac
-
-echo "Program completed successfully"; exit 0
