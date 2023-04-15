@@ -28,8 +28,9 @@ jobs:
             --package_system=${{ env.PACKAGE_SYSTEM }} \
             --print_temp_dir=normal \
             --container_security_privileged \
-            --keep_temp_dir \
-            --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}"
+            --local_cache_ci_mode \
+            --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}" \
+            --keep_temp_dir
       - name: Upload .release folder as artifact
         uses: actions/upload-artifact@v3
         with:
