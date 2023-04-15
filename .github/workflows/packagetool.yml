@@ -1,6 +1,6 @@
-name: Run packagetool for a package system
+name: Run packagetool for a specified package system
 on:
-  workflow_call:
+  [workflow_dispatch,workflow_call]
     inputs:
       package_system:
         description: 'The package system to use'
@@ -9,7 +9,12 @@ on:
       run_tests:
         description: 'Run tests after building the package'
         required: false
-        default: false
+        default: true
+        type: boolean
+      produce_artifact:
+        description: 'Produce an artifact from the .release folder'
+        required: false
+        default: true
         type: boolean
 jobs:
   packagetool:
@@ -25,11 +30,15 @@ jobs:
           printf 'CACHE_YEAR_AND_WEEK=%s\n' "$(date +Y%YW%V)" | tee -a "$GITHUB_OUTPUT"
           docker buildx create --use --driver=docker-container
           mkdir -p "${{ env.DOCKER_CACHE_DIR }}"
-      - name: GitHub Actions Cache for Docker
+      - name: GitHub Actions Cache for Docker (no tests)
+        # Note: We separate the caches since we don't want to end up saving a cache without the build dependencies, which
+        # tend to be the largest part of the cache. This could be handled better, but it would be unnecessarily complex.
+        # The problem is mainly that once created, GitHub actions caches are read only.
+        if: ${{ !inputs.run_tests }}
         uses: actions/cache@v3
         with:
           path: ${{ env.DOCKER_CACHE_DIR }}
-          key: docker-cache-${{ env.PACKAGE_SYSTEM }}-${{ steps.jobenv.outputs.CACHE_YEAR_AND_WEEK }}
+          key: docker-cache-${{ env.PACKAGE_SYSTEM }}-lite-${{ steps.jobenv.outputs.CACHE_YEAR_AND_WEEK }}
       - name: Run packagetool.sh (no tests)
         if: ${{ !inputs.run_tests }}
         run: |
@@ -42,6 +51,12 @@ jobs:
             --keep_temp_dir \
             --package_system=${{ env.PACKAGE_SYSTEM }} \
             --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}"
+      - name: GitHub Actions Cache for Docker (with tests)
+        if: ${{ inputs.run_tests }}
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.DOCKER_CACHE_DIR }}
+          key: docker-cache-${{ env.PACKAGE_SYSTEM }}-${{ steps.jobenv.outputs.CACHE_YEAR_AND_WEEK }}
       - name: Run packagetool.sh (with tests)
         if: ${{ inputs.run_tests }}
         run: |
@@ -54,6 +69,7 @@ jobs:
             --package_system=${{ env.PACKAGE_SYSTEM }} \
             --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}"
       - name: Upload .release folder as artifact
+        if: ${{ inputs.produce_artifact }}
         uses: actions/upload-artifact@v3
         with:
           name: release-${{ env.PACKAGE_SYSTEM }}
