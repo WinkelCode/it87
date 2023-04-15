@@ -6,7 +6,7 @@ env:
     docker buildx create --use --driver=docker-container
     echo "123"
     printf 'CACHE_YEAR_AND_WEEK=%s\n' "$(date +Y%YW%V)" | tee -a "$GITHUB_OUTPUT"
-    ./packagetool.sh --help
+    echo 456
 jobs:
   test:
     runs-on: ubuntu-latest
