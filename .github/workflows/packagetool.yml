@@ -1,4 +1,4 @@
-name: Run packagetool for a specified package system
+name: 'Run packagetool for a specified package system'
 on:
   workflow_call:
     inputs:
