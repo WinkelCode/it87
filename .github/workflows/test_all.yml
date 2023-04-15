@@ -4,7 +4,7 @@ env:
   DOCKER_CACHE_DIR: /tmp/GitHubActions-DockerCache
   STD_ENV_COMMAND: |
     docker buildx create --use --driver=docker-container &&
-    mkdir -p "${{ env.DOCKER_CACHE_DIR }}" &&
+    mkdir -p "/test" &&
     printf 'CACHE_YEAR_AND_WEEK=%s\n' "$(date +Y%YW%V)" | tee -a "$GITHUB_OUTPUT"
     ./packagetool.sh --help
 
