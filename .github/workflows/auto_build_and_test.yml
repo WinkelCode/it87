@@ -1,0 +1,22 @@
+name: 'WIP: Automatic build and test'
+on:
+  workflow_dispatch:
+jobs:
+  build_and_test_apk:
+    uses: ./.github/workflows/packagetool.yml
+    with:
+      package_system: 'apk'
+      run_tests: true
+      produce_artifact: true
+  build_and_test_deb:
+    uses: ./.github/workflows/packagetool.yml
+    with:
+      package_system: 'deb'
+      run_tests: true
+      produce_artifact: true
+  build_and_test_rpm:
+    uses: ./.github/workflows/packagetool.yml
+    with:
+      package_system: 'rpm'
+      run_tests: true
+      produce_artifact: true
