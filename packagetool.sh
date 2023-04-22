@@ -51,7 +51,6 @@ EOF
 parse_arguments() {
 	will_exit_with_err='false'
 	will_exit_with_ok='false'
-	will_print_usage='false'
 	while [ "$1" ]; do
 		case "$1" in
 			--print_repo_info)
@@ -119,7 +118,7 @@ parse_arguments() {
 				shift
 				;;
 			--help|-h)
-				will_print_usage='true'
+				print_usage
 				will_exit_with_ok='true'
 				shift
 				;;
@@ -158,12 +157,11 @@ parse_arguments() {
 	fi
 	
 	# Exit modes
-	if [ "$will_print_usage" == 'true' ]; then
-		print_usage
-	fi
 	if [ "$will_exit_with_err" == 'true' ]; then
+		printf '%s\n' "Error: Exiting due to argument parsing error, see above for details"
 		exit 1
 	elif [ "$will_exit_with_ok" == 'true' ]; then
+		printf '%s\n' "Info: A supplied option requests an early exit, exiting now"
 		exit 0
 	fi
 }
