@@ -48,7 +48,7 @@ jobs:
         id: jobenv
         run: |
           printf 'CACHE_YEAR_AND_WEEK=%s\n' "$(date +Y%YW%V)" | tee -a "$GITHUB_OUTPUT"
-          docker buildx create --use --driver=docker-container
+          docker buildx install
           mkdir -p "${{ env.DOCKER_CACHE_DIR }}"
       - name: GitHub Actions Cache for Docker (no tests)
         # Note: We separate the caches since we don't want to end up saving a cache without the build dependencies, which
