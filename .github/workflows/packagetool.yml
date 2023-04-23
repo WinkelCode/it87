@@ -58,13 +58,17 @@ jobs:
         id: jobenv
         run: |
           printf 'CACHE_YEAR_AND_WEEK=%s\n' "$(date +Y%YW%V)" | tee -a "$GITHUB_OUTPUT"
-          docker buildx install
+          docker buildx 
           mkdir -p "${{ env.DOCKER_CACHE_DIR }}"
+          if [ "${{ inputs.use_build_cache }}" != 'true' ]; then
+            # packagetool.sh in 'ci_mode' won't try to save the cache if index.json already exists.
+            touch "${{ env.DOCKER_CACHE_DIR }}"/index.json
+          fi
       - name: GitHub Actions Cache for Docker (no tests)
         # Note: We separate the caches since we don't want to end up saving a cache without the build dependencies, which
         # tend to be the largest part of the cache. This could be handled better, but it would be unnecessarily complex.
         # The problem is mainly that once created, GitHub actions caches are read only.
-        if: ${{ !inputs.run_tests }}
+        if: ${{ !inputs.run_tests && inputs.use_build_cache }}
         uses: actions/cache@v3
         with:
           path: ${{ env.DOCKER_CACHE_DIR }}
@@ -74,23 +78,15 @@ jobs:
         # Fortunately we have an option for that and it's fine since the filesystem doesn't persist between runs.
         if: ${{ !inputs.run_tests }}
         run: |
-          if [ "${{ inputs.use_build_cache }}" == "true" ]; then
-            ./packagetool.sh \
-              --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}" \
-              --local_cache_ci_mode \
-              --container_runtime=docker \
-              --package_system=${{ env.PACKAGE_SYSTEM }} \
-              --keep_temp_dir \
-              --print_temp_dir=normal
-          else
-            ./packagetool.sh \
-              --container_runtime=docker \
-              --package_system=${{ env.PACKAGE_SYSTEM }} \
-              --keep_temp_dir \
-              --print_temp_dir=normal
-          fi
+          ./packagetool.sh \
+            --container_runtime=docker \
+            --package_system=${{ env.PACKAGE_SYSTEM }} \
+            --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}" \
+            --local_cache_ci_mode \
+            --keep_temp_dir \
+            --print_temp_dir=normal
       - name: GitHub Actions Cache for Docker (with tests)
-        if: ${{ inputs.run_tests }}
+        if: ${{ inputs.run_tests && inputs.use_build_cache }}
         uses: actions/cache@v3
         with:
           path: ${{ env.DOCKER_CACHE_DIR }}
@@ -98,25 +94,15 @@ jobs:
       - name: Run packagetool.sh (with tests)
         if: ${{ inputs.run_tests }}
         run: |
-          if [ "${{ inputs.use_build_cache }}" == "true" ]; then
-            ./packagetool.sh \
-              --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}" \
-              --local_cache_ci_mode \
-              --container_runtime=docker \
-              --package_system=${{ env.PACKAGE_SYSTEM }} \
-              --run_build_tests \
-              --keep_temp_dir \
-              --container_security_privileged \
-              --print_temp_dir=normal
-          else
-            ./packagetool.sh \
-              --container_runtime=docker \
-              --package_system=${{ env.PACKAGE_SYSTEM }} \
-              --run_build_tests \
-              --keep_temp_dir \
-              --container_security_privileged \
-              --print_temp_dir=normal
-          fi
+          ./packagetool.sh \
+            --container_runtime=docker \
+            --package_system=${{ env.PACKAGE_SYSTEM }} \
+            --run_build_tests \
+            --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}" \
+            --local_cache_ci_mode \
+            --keep_temp_dir \
+            --container_security_privileged \
+            --print_temp_dir=normal
       - name: Upload package artifact (alpine-akms-apk)
         if: ${{ inputs.produce_artifact && inputs.package_system == 'apk' }}
         uses: actions/upload-artifact@v3
