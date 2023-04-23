@@ -61,11 +61,6 @@ jobs:
           docker buildx install
           docker buildx create --name packagetool-builder --use
           mkdir -p "${{ env.DOCKER_CACHE_DIR }}"
-          if [ "${{ inputs.use_build_cache }}" == 'false' ]; then
-            # 'packagetool.sh' in '--local_cache_ci_mode' won't try to save the cache if 'index.json' already exists.
-            # Since we don't restore the cache, nothing will be loaded from it.
-            touch "${{ env.DOCKER_CACHE_DIR }}"/index.json
-          fi
       - name: GitHub Actions Cache for Docker (no tests)
         # Note: We separate the caches since we don't want to end up saving a cache without the build dependencies, which
         # tend to be the largest part of the cache. This could be handled better, but it would be unnecessarily complex.
@@ -83,8 +78,8 @@ jobs:
           ./packagetool.sh \
             --container_runtime=docker \
             --package_system=${{ env.PACKAGE_SYSTEM }} \
-            --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}" \
-            --local_cache_ci_mode \
+            $(if [ "${{ inputs.use_build_cache }}" == 'true' ]; then printf '%s' "--local_cache_dir=\"${{ env.DOCKER_CACHE_DIR }}\""; fi) \
+            $(if [ "${{ inputs.use_build_cache }}" == 'true' ]; then printf '%s' "--local_cache_ci_mode"; fi) \
             --keep_temp_dir \
             --print_temp_dir=normal
       - name: GitHub Actions Cache for Docker (with tests)
@@ -100,8 +95,8 @@ jobs:
             --container_runtime=docker \
             --package_system=${{ env.PACKAGE_SYSTEM }} \
             --run_build_tests \
-            --local_cache_dir="${{ env.DOCKER_CACHE_DIR }}" \
-            --local_cache_ci_mode \
+            $(if [ "${{ inputs.use_build_cache }}" == 'true' ]; then printf '%s' "--local_cache_dir=\"${{ env.DOCKER_CACHE_DIR }}\""; fi) \
+            $(if [ "${{ inputs.use_build_cache }}" == 'true' ]; then printf '%s' "--local_cache_ci_mode"; fi) \
             --keep_temp_dir \
             --container_security_privileged \
             --print_temp_dir=normal
