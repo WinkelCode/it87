@@ -58,7 +58,8 @@ jobs:
         id: jobenv
         run: |
           printf 'CACHE_YEAR_AND_WEEK=%s\n' "$(date +Y%YW%V)" | tee -a "$GITHUB_OUTPUT"
-          docker buildx 
+          docker buildx install
+          docker buildx create --name packagetool-builder --use
           mkdir -p "${{ env.DOCKER_CACHE_DIR }}"
           if [ "${{ inputs.use_build_cache }}" != 'true' ]; then
             # packagetool.sh in 'ci_mode' won't try to save the cache if index.json already exists.

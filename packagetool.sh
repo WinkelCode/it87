@@ -28,7 +28,7 @@ Options:
 	(Optional) --local_cache_dir=LOCAL_CACHE_DIR
 		Directory to use as a local cache for the build process.
 		* Will only try to load cache if 'index.json' exists in the directory (will created upon writing cache).
-		Only works with 'docker' as the container runtime, and requires 'buildx' to be the default builder.
+		Requires 'buildx' driver ('docker buildx create --use') and alias ('docker buildx install').
 	(Optional) --local_cache_ci_mode
 		For caching systems that only allow one-time cache writing.
 		* Will only write cache if no cache exists ('index.json' not in directory).
@@ -235,7 +235,7 @@ container_build_and_run() {
 				{ printf '%s\n' "Error: '${container_name}' exited with non-zero status '$?'. Aborting."; exit 1; }
 			;;
 		docker)
-			printf '%s\n' "${containerfile}" | docker buildx build ${build_opts[@]} --load --tag "${container_name}" --file - ${temp_dir} ||
+			printf '%s\n' "${containerfile}" | docker build ${build_opts[@]} --load --tag "${container_name}" --file - ${temp_dir} ||
 				{ printf '%s\n' "Error: Failed to build '${container_name}' image."; exit 1; }
 			docker run ${run_opts[@]} --rm "${container_name}" ${container_run_command} ||
 				{ printf '%s\n' "Error: '${container_name}' exited with non-zero status '$?'. Aborting."; exit 1; }
