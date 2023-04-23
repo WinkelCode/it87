@@ -8,15 +8,18 @@ jobs:
       package_system: 'apk'
       run_tests: true
       produce_artifact: true
+      use_build_cache: true
   build_and_test_deb:
     uses: ./.github/workflows/packagetool.yml
     with:
       package_system: 'deb'
       run_tests: true
       produce_artifact: true
+      use_build_cache: true
   build_and_test_rpm:
     uses: ./.github/workflows/packagetool.yml
     with:
       package_system: 'rpm'
       run_tests: true
       produce_artifact: true
+      use_build_cache: true
