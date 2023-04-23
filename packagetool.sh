@@ -17,7 +17,8 @@ Options:
 	(Required) --package_system=PACKAGE_SYSTEM
 		Package system to target. Valid values are 'apk', 'deb', and 'rpm'.
 	(Optional) --run_build_tests
-		Test the dynamic module build process.
+		Test the package install and dynamic module build process after building the package.
+		May require additional privileges in some environments.
 	(Optional) --inspect_container
 		Inspect the container with a shell after building (and testing) the package.
 		Note: 'exit'-ing the container with a non-zero exit code will stop the script as well.
@@ -27,7 +28,7 @@ Options:
 	(Optional) --local_cache_dir=LOCAL_CACHE_DIR
 		Directory to use as a local cache for the build process.
 		* Will only try to load cache if 'index.json' exists in the directory (will created upon writing cache).
-		Only works with 'docker' as the container runtime.
+		Only works with 'docker' as the container runtime, and requires 'buildx' to be the default builder.
 	(Optional) --local_cache_ci_mode
 		For caching systems that only allow one-time cache writing.
 		* Will only write cache if no cache exists ('index.json' not in directory).
