@@ -61,8 +61,9 @@ jobs:
           docker buildx install
           docker buildx create --name packagetool-builder --use
           mkdir -p "${{ env.DOCKER_CACHE_DIR }}"
-          if [ "${{ inputs.use_build_cache }}" != 'true' ]; then
-            # packagetool.sh in 'ci_mode' won't try to save the cache if index.json already exists.
+          if [ "${{ inputs.use_build_cache }}" == 'false' ]; then
+            # 'packagetool.sh' in '--local_cache_ci_mode' won't try to save the cache if 'index.json' already exists.
+            # Since we don't restore the cache, nothing will be loaded from it.
             touch "${{ env.DOCKER_CACHE_DIR }}"/index.json
           fi
       - name: GitHub Actions Cache for Docker (no tests)
