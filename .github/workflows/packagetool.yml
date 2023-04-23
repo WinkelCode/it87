@@ -78,7 +78,7 @@ jobs:
           ./packagetool.sh \
             --container_runtime=docker \
             --package_system=${{ env.PACKAGE_SYSTEM }} \
-            $(if [ "${{ inputs.use_build_cache }}" == 'true' ]; then printf '%s' "--local_cache_dir=\"${{ env.DOCKER_CACHE_DIR }}\""; fi) \
+            $(if [ "${{ inputs.use_build_cache }}" == 'true' ]; then printf '%s' "--local_cache_dir=${{ env.DOCKER_CACHE_DIR }}"; fi) \
             $(if [ "${{ inputs.use_build_cache }}" == 'true' ]; then printf '%s' "--local_cache_ci_mode"; fi) \
             --keep_temp_dir \
             --print_temp_dir=normal
@@ -95,7 +95,7 @@ jobs:
             --container_runtime=docker \
             --package_system=${{ env.PACKAGE_SYSTEM }} \
             --run_build_tests \
-            $(if [ "${{ inputs.use_build_cache }}" == 'true' ]; then printf '%s' "--local_cache_dir=\"${{ env.DOCKER_CACHE_DIR }}\""; fi) \
+            $(if [ "${{ inputs.use_build_cache }}" == 'true' ]; then printf '%s' "--local_cache_dir=${{ env.DOCKER_CACHE_DIR }}"; fi) \
             $(if [ "${{ inputs.use_build_cache }}" == 'true' ]; then printf '%s' "--local_cache_ci_mode"; fi) \
             --keep_temp_dir \
             --container_security_privileged \
