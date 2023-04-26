@@ -13,7 +13,7 @@ Options:
 		Print detected information about the current repository and exit.
 		The shown variables can be set manually in the environment or hardcoded in the script.
 	(Required) --container_runtime=CONTAINER_RUNTIME
-		Container runtime to use. Valid values are 'podman' and 'docker'.
+		Container runtime to use. Valid values are 'podman', 'docker', and 'docker-buildx.
 	(Required) --package_system=PACKAGE_SYSTEM
 		Package system to target. Valid values are 'apk', 'deb', and 'rpm'.
 	(Optional) --run_build_tests
@@ -28,7 +28,7 @@ Options:
 	(Optional) --local_cache_dir=LOCAL_CACHE_DIR
 		Directory to use as a local cache for the build process.
 		* Will only try to load cache if 'index.json' exists in the directory (will created upon writing cache).
-		Requires 'buildx' driver ('docker buildx create --use') and alias ('docker buildx install').
+		Requires 'docker-buildx' container runtime.
 	(Optional) --local_cache_ci_mode
 		For caching systems that only allow one-time cache writing.
 		* Will only write cache if no cache exists ('index.json' not in directory).
@@ -61,7 +61,7 @@ parse_arguments() {
 				;;
 			--container_runtime=*)
 				container_runtime="${1#*=}"
-				valid_container_runtimes='(podman|docker)'
+				valid_container_runtimes='(podman|docker|docker-buildx)'
 				if [[ ! "$container_runtime" =~ ^${valid_container_runtimes}$ ]]; then
 					printf '%s\n' "Error: Invalid runtime '$container_runtime', must be one of '$valid_container_runtimes'"
 					will_exit_with_err='true'
@@ -148,8 +148,8 @@ parse_arguments() {
 			will_exit_with_err='true'
 		fi
 	done
-	if [ "$local_cache_dir" ] && [ "$container_runtime" != 'docker' ]; then
-		printf '%s\n' "Error: LOCAL_CACHE_DIR requires 'docker' container runtime"
+	if [ "$local_cache_dir" ] && [ "$container_runtime" != 'docker-buildx' ]; then
+		printf '%s\n' "Error: LOCAL_CACHE_DIR requires 'docker-buildx' container runtime"
 		will_exit_with_err='true'
 	fi
 	if [ "$local_cache_ci_mode" == 'true' ] && [ ! "$local_cache_dir" ]; then
@@ -158,8 +158,18 @@ parse_arguments() {
 	fi
 
 	if ! command -v "$container_runtime" &>/dev/null; then
-		printf '%s\n' "Error: Container runtime '$container_runtime' not found in PATH"
-		will_exit_with_err='true'
+		if [ "$container_runtime" == 'docker-buildx' ]; then # We need to check for buildx separately
+			if ! command -v docker &>/dev/null; then
+				printf '%s\n' "Error: Container runtime 'docker' not found in PATH"
+				will_exit_with_err='true'
+			elif ! docker buildx version &>/dev/null; then
+				printf '%s\n' "Error: Found 'docker' in PATH but 'docker buildx' is not available"
+				will_exit_with_err='true'
+			fi
+		else
+			printf '%s\n' "Error: Container runtime '$container_runtime' not found in PATH"
+			will_exit_with_err='true'
+		fi
 	fi
 	
 	# Exit modes
@@ -217,7 +227,7 @@ container_build_and_run() {
 	container_run_command="${2}"
 	
 	build_opts=()
-	if [ "$local_cache_dir" ] && [ "$container_runtime" == 'docker' ]; then
+	if [ "$local_cache_dir" ] && [ "$container_runtime" == 'docker-buildx' ]; then
 		if [ -f "${local_cache_dir}/index.json" ]; then # Only trying to load if the cache is not empty.
 			printf '%s\n' "-> Will try to load from local container build cache at '${local_cache_dir}'."
 			build_opts+=("--cache-from" "type=local,src=${local_cache_dir},compression=uncompressed") # GitHub actions cache always uses zstd compression, so we skip it here.
@@ -240,7 +250,13 @@ container_build_and_run() {
 				{ printf '%s\n' "Error: '${container_name}' exited with non-zero status '$?'. Aborting."; exit 1; }
 			;;
 		docker)
-			printf '%s\n' "${containerfile}" | docker build ${build_opts[@]} --load --tag "${container_name}" --file - ${temp_dir} ||
+			printf '%s\n' "${containerfile}" | docker build ${build_opts[@]} --tag "${container_name}" --file - ${temp_dir} ||
+				{ printf '%s\n' "Error: Failed to build '${container_name}' image."; exit 1; }
+			docker run ${run_opts[@]} --rm "${container_name}" ${container_run_command} ||
+				{ printf '%s\n' "Error: '${container_name}' exited with non-zero status '$?'. Aborting."; exit 1; }
+			;;
+		docker-buildx)
+			printf '%s\n' "${containerfile}" | docker buildx build ${build_opts[@]} --load --tag "${container_name}" --file - ${temp_dir} ||
 				{ printf '%s\n' "Error: Failed to build '${container_name}' image."; exit 1; }
 			docker run ${run_opts[@]} --rm "${container_name}" ${container_run_command} ||
 				{ printf '%s\n' "Error: '${container_name}' exited with non-zero status '$?'. Aborting."; exit 1; }
