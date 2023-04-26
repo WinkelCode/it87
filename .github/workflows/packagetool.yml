@@ -57,7 +57,7 @@ jobs:
       - name: Set up job environment
         id: jobenv
         run: |
-          printf 'CACHE_YEAR_AND_WEEK=%s\n' "$(date +Y%YW%V)" | tee -a "$GITHUB_OUTPUT"
+          printf 'CACHE_YEAR_AND_WEEK=%s\n' "$(date '+Y%YW%V')" | tee -a "$GITHUB_OUTPUT"
           docker buildx install
           docker buildx create --name packagetool-builder --use
           mkdir -p "${{ env.DOCKER_CACHE_DIR }}"

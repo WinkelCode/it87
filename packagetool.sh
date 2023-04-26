@@ -156,6 +156,11 @@ parse_arguments() {
 		printf '%s\n' "Error: LOCAL_CACHE_CI_MODE requires LOCAL_CACHE_DIR"
 		will_exit_with_err='true'
 	fi
+
+	if ! command -v "$container_runtime" &>/dev/null; then
+		printf '%s\n' "Error: Container runtime '$container_runtime' not found in PATH"
+		will_exit_with_err='true'
+	fi
 	
 	# Exit modes
 	if [ "$will_exit_with_err" == 'true' ]; then
@@ -176,12 +181,12 @@ gather_repo_info() {
 		[ "$current_commit" ] ||
 			current_commit="$(git rev-parse HEAD 2>/dev/null || printf 'unknown')" # Commit hash of the current commit
 		[ "$working_tree_timestamp" ] ||
-			working_tree_timestamp="$(git show -s --format=%cd --date=iso-strict "${current_commit}" 2>/dev/null || printf '%s' "$(date --iso-8601=seconds)")"
+			working_tree_timestamp="$(git show -s --format=%cd --date=unix "${current_commit}" 2>/dev/null || printf '%s' "$(date '+%s')")"
 	else # If working tree is dirty or invalid, use the current date
 		[ "$current_commit" ] ||
 			current_commit='unknown'
 		[ "$working_tree_timestamp" ] ||
-			working_tree_timestamp="$(date --iso-8601=seconds)"
+			working_tree_timestamp="$(date '+%s')"
 	fi
 
 	[ "$origin_url" ] ||
@@ -284,7 +289,7 @@ build_apk() {
 		"_repo_name=\"${origin_name}\""
 		"_repo_owner=\"${origin_owner}\""
 		"_repo_commit=\"${current_commit}\""
-		"_package_timestamp=\"$(date --date="${working_tree_timestamp}" +%Y%m%d)\""
+		"_package_timestamp=\"$(date -u -d "@${working_tree_timestamp}" '+%Y%m%d')\""
 		"source=\"${origin_name}.tar.gz\""
 	)
 	printf '%s\n' "${build_overrides[@]}" >"${temp_dir}/APKBUILD/APKBUILD" # Write overrides
@@ -370,24 +375,30 @@ build_apk() {
 
 	# Copy out the apk packages
 	cp "${temp_dir}/packages/"*/*.apk "${apk_packages_folder}"
-
+	
 	# Extract akms files for manual install
+	if tar --version | grep -q 'busybox'; then
+		no_warning_option='' # busybox tar doesn't support (and doesn't need) --warning=no-unknown-keyword
+	else
+		no_warning_option=' --warning=no-unknown-keyword' # tar can act weird if we have a stray space, so we have it in the variable
+	fi
+
 	mainpkg=$(ls "${apk_packages_folder}/"*.apk | head -n 1) # ls with a glob '*.apk' returns the full relative path.
 	mainpkgfiles=(
 		"etc/depmod.d/${software_name}-oot.conf"
 		"etc/modules-load.d/${software_name}-oot.conf"
 	)
-	tar -xf "${mainpkg}" -C "${akms_manual_root_folder}/" "${mainpkgfiles[@]}" --warning=no-unknown-keyword
+	tar -xf "${mainpkg}" -C "${akms_manual_root_folder}/" "${mainpkgfiles[@]}"${no_warning_option}
 	akmspkg=$(ls "${apk_packages_folder}/"*akms*.apk | head -n 1)
 	akmspkgfiles=(
 		"usr/src/${software_name}-oot/"
 	)
-	tar -xf "${akmspkg}" -C "${akms_manual_root_folder}/" "${akmspkgfiles[@]}" --warning=no-unknown-keyword
+	tar -xf "${akmspkg}" -C "${akms_manual_root_folder}/" "${akmspkgfiles[@]}"${no_warning_option}
 	ircpkg=$(ls "${apk_packages_folder}/"*ignore_resource_conflict*.apk | head -n 1)
 	ircpkgfiles=(
 		"etc/modprobe.d/${software_name}-oot.conf"
 	)
-	tar -xf "${ircpkg}" -C "${akms_manual_root_folder}/" "${ircpkgfiles[@]}" --warning=no-unknown-keyword
+	tar -xf "${ircpkg}" -C "${akms_manual_root_folder}/" "${ircpkgfiles[@]}"${no_warning_option}
 }
 
 build_rpm() {
@@ -398,7 +409,7 @@ build_rpm() {
 		"%global repo_name ${origin_name}"
 		"%global repo_owner ${origin_owner}"
 		"%global repo_commit ${current_commit}"
-		"%global package_timestamp $(date --date="${working_tree_timestamp}" +%Y%m%d)"
+		"%global package_timestamp $(date -u -d "@${working_tree_timestamp}" '+%Y%m%d')"
 	)
 	for spec_file in "./redhat/"*.spec; do # Write overrides, then insert the original spec file
 		spec_file_target="${temp_dir}/rpmbuild/SPECS/${spec_file##*/}"
