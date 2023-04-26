@@ -58,7 +58,6 @@ jobs:
         id: jobenv
         run: |
           printf 'CACHE_YEAR_AND_WEEK=%s\n' "$(date '+Y%YW%V')" | tee -a "$GITHUB_OUTPUT"
-          docker buildx install
           docker buildx create --name packagetool-builder --use
           mkdir -p "${{ env.DOCKER_CACHE_DIR }}"
       - name: GitHub Actions Cache for Docker (no tests)
@@ -76,7 +75,7 @@ jobs:
         if: ${{ !inputs.run_tests }}
         run: |
           ./packagetool.sh \
-            --container_runtime=docker \
+            --container_runtime=docker-buildx \
             --package_system=${{ env.PACKAGE_SYSTEM }} \
             $(if [ "${{ inputs.use_build_cache }}" == 'true' ]; then printf '%s' "--local_cache_dir=${{ env.DOCKER_CACHE_DIR }}"; fi) \
             $(if [ "${{ inputs.use_build_cache }}" == 'true' ]; then printf '%s' "--local_cache_ci_mode"; fi) \
@@ -92,7 +91,7 @@ jobs:
         if: ${{ inputs.run_tests }}
         run: |
           ./packagetool.sh \
-            --container_runtime=docker \
+            --container_runtime=docker-buildx \
             --package_system=${{ env.PACKAGE_SYSTEM }} \
             --run_build_tests \
             $(if [ "${{ inputs.use_build_cache }}" == 'true' ]; then printf '%s' "--local_cache_dir=${{ env.DOCKER_CACHE_DIR }}"; fi) \
