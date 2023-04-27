@@ -41,9 +41,23 @@ jobs:
       # - build_and_test_rpm
     runs-on: ubuntu-latest
     steps:
-      # - uses: actions/checkout@v3
       - name: Download all artifacts
         uses: actions/download-artifact@v3
         with:
           path: /tmp/artifacts
-      - run: ls -R /tmp/artifacts
+      - name: Create tarballs
+        run: |
+          mkdir -p /tmp/tarballs
+          for artifact_dir in /tmp/artifacts/*; do
+            artifact_name="${artifact_dir##*/}"
+            tar -C "$artifact_dir" -czf "/tmp/tarballs/$artifact_name.tar.gz" .
+          done
+          # Iso date without offset
+          printf 'RELEASE_TIMESTAMP=\'%s\'' "$(date -u '+%Y-%m-%d %H:%M:%S')" | tee -a "$GITHUB_OUTPUT"
+      - name: Create release draft
+        uses: softprops/action-gh-release@c9b46fe7aad9f02afd89b12450b780f52dacfb2d
+        with:
+          name: ${{ env.RELEASE_TIMESTAMP }}
+          draft: true
+          prerelease: true
+          files: /tmp/tarballs/*
