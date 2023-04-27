@@ -87,8 +87,8 @@ jobs:
           # artifactErrorsFailBuild: true
           # # We will update the previous release if it was created on the same day.
           tag: snapshot-${{ steps.jobenv.outputs.ISO_DATE }}
-          # allowUpdates: true
-          # removeArtifacts: true
+          allowUpdates: true
+          removeArtifacts: true
       # - name: Create release draft
       #   uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
       #   with:
