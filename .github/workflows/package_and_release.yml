@@ -85,7 +85,6 @@ jobs:
       - name: Create release draft
         uses: ncipollo/release-action@a2e71bdd4e7dab70ca26a852f29600c98b33153e
         with:
-          allowUpdates: true
           artifactErrorsFailBuild: true
           artifacts: /tmp/tarballs/*
           artifactContentType: application/gzip
@@ -107,4 +106,3 @@ jobs:
           draft: true
           name: Snapshot ${{ steps.jobenv.outputs.RELEASE_TIMESTAMP }} - "${{ steps.jobenv.outputs.COMMIT_MESSAGE }}"
           removeArtifacts: true
-          tag: latest-snapshot
