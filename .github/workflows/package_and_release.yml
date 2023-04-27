@@ -53,7 +53,7 @@ jobs:
             artifact_name="${artifact_dir##*/}"
             tar -C "$artifact_dir" -czf "/tmp/tarballs/$artifact_name.tar.gz" .
           done
-          printf 'RELEASE_TIMESTAMP="%s"' "$(date -u '+%Y-%m-%d %H:%M:%S')" | tee -a "$GITHUB_OUTPUT"
+          printf 'RELEASE_TIMESTAMP=%s\n' "$(date -u '+%Y-%m-%d %H:%M:%S')" | tee -a "$GITHUB_OUTPUT"
       - name: Create release draft
         uses: softprops/action-gh-release@c9b46fe7aad9f02afd89b12450b780f52dacfb2d
         with:
