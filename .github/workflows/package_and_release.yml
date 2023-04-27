@@ -65,23 +65,23 @@ jobs:
         uses: ncipollo/release-action@a2e71bdd4e7dab70ca26a852f29600c98b33153e
         with:
           name: Snapshot ${{ steps.jobenv.outputs.FULL_TIMESTAMP }} - "${{ steps.jobenv.outputs.COMMIT_MESSAGE }}"
-          # draft: true
-          # prerelease: true
-          # body: |
-          #   Packaged commit: `${{ steps.jobenv.outputs.COMMIT_HASH }}`
-          #   # Asset contents:
-          #     - release-alpine-akms-apk.tar.gz
-          #       Module and supporting files as Alpine Linux '.apk' packages.
-          #     - release-alpine-akms-manual.tar.gz
-          #       Module and supporting files for Alpine Linux via manual installation.
-          #       - Note: `/etc/modprobe.d/it87-oot.conf` should only be installed if `ignore_resource_conflict` option is needed!
-          #     - release-debian-dkms-deb.tar.gz
-          #       Module as Debian '.deb' package.
-          #       - Note: Currently does not include package for `ignore_resource_conflict` option.
-          #     - release-redhat-akmods-rpm.tar.gz
-          #       Module and supporting files as Red Hat '.rpm' packages, also works with Fedora Silverblue & co.
-          #     - release-redhat-akmods-source-rpm.tar.gz
-          #       Source RPMs (for debugging and inspection).
+          draft: true
+          prerelease: true
+          body: |
+            Packaged commit: `${{ steps.jobenv.outputs.COMMIT_HASH }}`
+            # Asset contents:
+              - release-alpine-akms-apk.tar.gz
+                Module and supporting files as Alpine Linux '.apk' packages.
+              - release-alpine-akms-manual.tar.gz
+                Module and supporting files for Alpine Linux via manual installation.
+                - Note: `/etc/modprobe.d/it87-oot.conf` should only be installed if `ignore_resource_conflict` option is needed!
+              - release-debian-dkms-deb.tar.gz
+                Module as Debian '.deb' package.
+                - Note: Currently does not include package for `ignore_resource_conflict` option.
+              - release-redhat-akmods-rpm.tar.gz
+                Module and supporting files as Red Hat '.rpm' packages, also works with Fedora Silverblue & co.
+              - release-redhat-akmods-source-rpm.tar.gz
+                Source RPMs (for debugging and inspection).
           # artifacts: /tmp/tarballs/*
           # artifactContentType: application/gzip
           # artifactErrorsFailBuild: true
