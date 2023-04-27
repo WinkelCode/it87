@@ -63,21 +63,23 @@ jobs:
       - name: Create release draft
         uses: softprops/action-gh-release@c9b46fe7aad9f02afd89b12450b780f52dacfb2d
         with:
-          name: "Snapshot ${{ steps.jobenv.outputs.RELEASE_TIMESTAMP }} - '${{ steps.jobenv.outputs.COMMIT_MESSAGE }}'"
+          name: Snapshot ${{ steps.jobenv.outputs.RELEASE_TIMESTAMP }} - "${{ steps.jobenv.outputs.COMMIT_MESSAGE }}"
           body: |
-            Built commit: '${{ steps.tarball_and_timestamp.outputs.COMMIT_HASH }}'
-            Contents:
+            Built commit: "${{ steps.jobenv.outputs.COMMIT_HASH }}"
+            Attachment contents:
               - release-alpine-akms-apk.tar.gz
-                Module and supporting files as Alpine Linux '.apk' packages
+                Module and supporting files as Alpine Linux '.apk' packages.
               - release-alpine-akms-manual.tar.gz
-                Module and supporting files for Alpine Linux for manual installation
-                - Note: `\modprobe.d\it87-oot.conf` should only be installed if 'ignore_resource_conflict' option is needed!
+                Module and supporting files for Alpine Linux via manual installation.
+                - Note: `/etc/modprobe.d/it87-oot.conf` should only be installed if `ignore_resource_conflict` option is needed!
               - release-debian-dkms-deb.tar.gz
-                Module and supporting files as Debian '.deb' packages
+                Module as Debian '.deb' package.
+                - Note: Currently does not include package for `ignore_resource_conflict` option.
               - release-redhat-akmods-rpm.tar.gz
-                Module and supporting files as Red Hat '.rpm' packages
+                Module and supporting files as Red Hat '.rpm' packages, also works with Fedora Silverblue & co.
               - release-redhat-akmods-source-rpm.tar.gz
-                Source RPMs (for debugging and inspection)
+                Source RPMs (for debugging and inspection).
           draft: true
           prerelease: true
+          tag_name: ${{ steps.jobenv.outputs.RELEASE_TIMESTAMP }}
           files: /tmp/tarballs/*
