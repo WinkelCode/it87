@@ -46,7 +46,8 @@ jobs:
       - name: Gather variables
         id: jobenv
         run: |
-          printf 'RELEASE_TIMESTAMP=%s\n' "$(date -u '+%Y-%m-%d %H:%M:%S')" | tee -a "$GITHUB_OUTPUT"
+          printf 'FULL_TIMESTAMP=%s\n' "$(date -u '+%Y-%m-%d %H:%M:%S')" | tee -a "$GITHUB_OUTPUT"
+          printf 'ISO_DATE=%s\n' "$(date -u '+%Y-%m-%d')" | tee -a "$GITHUB_OUTPUT"
           printf 'COMMIT_MESSAGE=%s\n' "$(git log -1 --pretty=%B | head -n 1)" | tee -a "$GITHUB_OUTPUT"
           printf 'COMMIT_HASH=%s\n' "$(git rev-parse HEAD)" | tee -a "$GITHUB_OUTPUT"
       - name: Download all artifacts
@@ -63,7 +64,7 @@ jobs:
       - name: Create release draft
         uses: ncipollo/release-action@a2e71bdd4e7dab70ca26a852f29600c98b33153e
         with:
-          name: Snapshot ${{ steps.jobenv.outputs.RELEASE_TIMESTAMP }} - "${{ steps.jobenv.outputs.COMMIT_MESSAGE }}"
+          name: Snapshot ${{ steps.jobenv.outputs.FULL_TIMESTAMP }} - "${{ steps.jobenv.outputs.COMMIT_MESSAGE }}"
           draft: true
           prerelease: true
           body: |
@@ -84,6 +85,7 @@ jobs:
           artifacts: /tmp/tarballs/*
           artifactContentType: application/gzip
           artifactErrorsFailBuild: true
-          tag: latest-snaphot
-          allowUpdates: false
+          # We will update the previous release if it was created on the same day.
+          tag: snapshot-${{ steps.jobenv.outputs.ISO_DATE }}
+          allowUpdates: true
           removeArtifacts: true
