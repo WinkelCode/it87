@@ -41,6 +41,7 @@ jobs:
       # - build_and_test_rpm
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
       - name: Download all artifacts
         uses: actions/download-artifact@v3
         with:
@@ -54,10 +55,12 @@ jobs:
             tar -C "$artifact_dir" -czf "/tmp/tarballs/$artifact_name.tar.gz" .
           done
           printf 'RELEASE_TIMESTAMP=%s\n' "$(date -u '+%Y-%m-%d %H:%M:%S')" | tee -a "$GITHUB_OUTPUT"
+          printf 'COMMIT_MESSAGE=%s\n' "$(git log -1 --pretty=%B | head -n 1)" | tee -a "$GITHUB_OUTPUT"
       - name: Create release draft
         uses: softprops/action-gh-release@c9b46fe7aad9f02afd89b12450b780f52dacfb2d
         with:
-          name: ${{ steps.tarball_and_timestamp.outputs.RELEASE_TIMESTAMP }}
+          # name: "Auto-Package: ${{ steps.tarball_and_timestamp.outputs.RELEASE_TIMESTAMP }} - ${{ steps.tarball_and_timestamp.outputs.COMMIT_MESSAGE }}"
+          generate_release_notes: true
           draft: true
           prerelease: true
           files: /tmp/tarballs/*
