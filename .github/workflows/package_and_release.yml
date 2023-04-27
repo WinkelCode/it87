@@ -65,8 +65,8 @@ jobs:
         with:
           name: Snapshot ${{ steps.jobenv.outputs.RELEASE_TIMESTAMP }} - "${{ steps.jobenv.outputs.COMMIT_MESSAGE }}"
           body: |
-            Built commit: "${{ steps.jobenv.outputs.COMMIT_HASH }}"
-            Attachment contents:
+            Packaged commit: `${{ steps.jobenv.outputs.COMMIT_HASH }}`
+            # Asset contents:
               - release-alpine-akms-apk.tar.gz
                 Module and supporting files as Alpine Linux '.apk' packages.
               - release-alpine-akms-manual.tar.gz
