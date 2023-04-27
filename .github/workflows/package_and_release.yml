@@ -60,10 +60,33 @@ jobs:
             artifact_name="${artifact_dir##*/}"
             tar -C "$artifact_dir" -czf "/tmp/tarballs/$artifact_name.tar.gz" .
           done
+      # - name: Create release draft
+      #   uses: softprops/action-gh-release@c9b46fe7aad9f02afd89b12450b780f52dacfb2d
+      #   with:
+      #     name: Snapshot ${{ steps.jobenv.outputs.RELEASE_TIMESTAMP }} - "${{ steps.jobenv.outputs.COMMIT_MESSAGE }}"
+      #     body: |
+      #       Packaged commit: `${{ steps.jobenv.outputs.COMMIT_HASH }}`
+      #       # Asset contents:
+      #         - release-alpine-akms-apk.tar.gz
+      #           Module and supporting files as Alpine Linux '.apk' packages.
+      #         - release-alpine-akms-manual.tar.gz
+      #           Module and supporting files for Alpine Linux via manual installation.
+      #           - Note: `/etc/modprobe.d/it87-oot.conf` should only be installed if `ignore_resource_conflict` option is needed!
+      #         - release-debian-dkms-deb.tar.gz
+      #           Module as Debian '.deb' package.
+      #           - Note: Currently does not include package for `ignore_resource_conflict` option.
+      #         - release-redhat-akmods-rpm.tar.gz
+      #           Module and supporting files as Red Hat '.rpm' packages, also works with Fedora Silverblue & co.
+      #         - release-redhat-akmods-source-rpm.tar.gz
+      #           Source RPMs (for debugging and inspection).
+      #     draft: true
+      #     prerelease: true
+      #     files: /tmp/tarballs/*
       - name: Create release draft
-        uses: softprops/action-gh-release@c9b46fe7aad9f02afd89b12450b780f52dacfb2d
+        uses: actions/create-release@v1
+        id: create_release
         with:
-          name: Snapshot ${{ steps.jobenv.outputs.RELEASE_TIMESTAMP }} - "${{ steps.jobenv.outputs.COMMIT_MESSAGE }}"
+          release_name: Snapshot ${{ steps.jobenv.outputs.RELEASE_TIMESTAMP }} - "${{ steps.jobenv.outputs.COMMIT_MESSAGE }}"
           body: |
             Packaged commit: `${{ steps.jobenv.outputs.COMMIT_HASH }}`
             # Asset contents:
@@ -81,4 +104,6 @@ jobs:
                 Source RPMs (for debugging and inspection).
           draft: true
           prerelease: true
-          files: /tmp/tarballs/*
+      - name: Testing
+        run: |
+          echo ${{ steps.create_release.outputs.upload_url }}
