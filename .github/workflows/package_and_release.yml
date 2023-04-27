@@ -82,9 +82,9 @@ jobs:
                 Module and supporting files as Red Hat '.rpm' packages, also works with Fedora Silverblue & co.
               - release-redhat-akmods-source-rpm.tar.gz
                 Source RPMs (for debugging and inspection).
-          artifacts: /tmp/tarballs/*
-          artifactContentType: application/gzip
-          artifactErrorsFailBuild: true
+          # artifacts: /tmp/tarballs/*
+          # artifactContentType: application/gzip
+          # artifactErrorsFailBuild: true
           # We will update the previous release if it was created on the same day.
           tag: snapshot-${{ steps.jobenv.outputs.ISO_DATE }}
           allowUpdates: true
