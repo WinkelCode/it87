@@ -36,8 +36,8 @@ jobs:
   prepare_release:
     needs:
       - build_and_test_apk
-      - build_and_test_deb
-      - build_and_test_rpm
+      # - build_and_test_deb
+      # - build_and_test_rpm
     runs-on: ubuntu-latest
     steps:
       # - uses: actions/checkout@v3
