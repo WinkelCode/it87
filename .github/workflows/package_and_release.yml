@@ -81,5 +81,4 @@ jobs:
                 Source RPMs (for debugging and inspection).
           draft: true
           prerelease: true
-          tag_name: ${{ steps.jobenv.outputs.RELEASE_TIMESTAMP }}
           files: /tmp/tarballs/*
