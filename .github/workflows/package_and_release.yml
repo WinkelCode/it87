@@ -83,8 +83,10 @@ jobs:
       #     prerelease: true
       #     files: /tmp/tarballs/*
       - name: Create release draft
-        uses: actions/create-release@v1
         id: create_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/create-release@v1
         with:
           release_name: Snapshot ${{ steps.jobenv.outputs.RELEASE_TIMESTAMP }} - "${{ steps.jobenv.outputs.COMMIT_MESSAGE }}"
           body: |
@@ -104,6 +106,4 @@ jobs:
                 Source RPMs (for debugging and inspection).
           draft: true
           prerelease: true
-      - name: Testing
-        run: |
-          echo ${{ steps.create_release.outputs.upload_url }}
+          
