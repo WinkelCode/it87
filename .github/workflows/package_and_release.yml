@@ -83,12 +83,12 @@ jobs:
       #     prerelease: true
       #     files: /tmp/tarballs/*
       - name: Create release draft
-        id: create_release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        uses: actions/create-release@v1
+        uses: ncipollo/release-action@a2e71bdd4e7dab70ca26a852f29600c98b33153e
         with:
-          release_name: Snapshot ${{ steps.jobenv.outputs.RELEASE_TIMESTAMP }} - "${{ steps.jobenv.outputs.COMMIT_MESSAGE }}"
+          allowUpdates: true
+          artifactErrorsFailBuild: true
+          artifacts: /tmp/tarballs/*
+          artifactContentType: application/gzip
           body: |
             Packaged commit: `${{ steps.jobenv.outputs.COMMIT_HASH }}`
             # Asset contents:
@@ -105,5 +105,5 @@ jobs:
               - release-redhat-akmods-source-rpm.tar.gz
                 Source RPMs (for debugging and inspection).
           draft: true
-          prerelease: true
-          
+          name: Snapshot ${{ steps.jobenv.outputs.RELEASE_TIMESTAMP }} - "${{ steps.jobenv.outputs.COMMIT_MESSAGE }}"
+          removeArtifacts: true
