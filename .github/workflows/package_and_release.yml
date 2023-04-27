@@ -1,0 +1,48 @@
+name: 'Package and prepare release'
+on:
+  # push:
+  #   branches:
+  #     - master
+  workflow_dispatch:
+jobs:
+  build_and_test_apk_testing:
+    uses: ./.github/workflows/packagetool.yml
+    with:
+      package_system: 'apk'
+      run_tests: false
+      produce_artifact: true
+      use_build_cache: true
+  # build_and_test_apk:
+  #   uses: ./.github/workflows/packagetool.yml
+  #   with:
+  #     package_system: 'apk'
+  #     run_tests: true
+  #     produce_artifact: true
+  #     use_build_cache: true
+  # build_and_test_deb:
+  #   uses: ./.github/workflows/packagetool.yml
+  #   with:
+  #     package_system: 'deb'
+  #     run_tests: true
+  #     produce_artifact: true
+  #     use_build_cache: true
+  # build_and_test_rpm:
+  #   uses: ./.github/workflows/packagetool.yml
+  #   with:
+  #     package_system: 'rpm'
+  #     run_tests: true
+  #     produce_artifact: true
+  #     use_build_cache: true
+  prepare_release:
+    needs:
+      - build_and_test_apk
+      - build_and_test_deb
+      - build_and_test_rpm
+    runs-on: ubuntu-latest
+    steps:
+      # - uses: actions/checkout@v3
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: /tmp/artifacts
+      - run: ls -R /tmp/artifacts

@@ -1,4 +1,4 @@
-name: 'Run packagetool for a specified package system'
+name: 'packagetool.sh wrapper'
 on:
   workflow_call:
     inputs:
