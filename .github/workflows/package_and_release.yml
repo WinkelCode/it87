@@ -4,6 +4,7 @@ on:
   #   branches:
   #     - master
   workflow_dispatch:
+  push:
 jobs:
   build_and_test_apk_testing:
     uses: ./.github/workflows/packagetool.yml
@@ -42,25 +43,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Gather variables
+        id: jobenv
+        run: |
+          printf 'RELEASE_TIMESTAMP=%s\n' "$(date -u '+%Y-%m-%d %H:%M:%S')" | tee -a "$GITHUB_OUTPUT"
+          printf 'COMMIT_MESSAGE=%s\n' "$(git log -1 --pretty=%B | head -n 1)" | tee -a "$GITHUB_OUTPUT"
+          printf 'COMMIT_HASH=%s\n' "$(git rev-parse HEAD)" | tee -a "$GITHUB_OUTPUT"
       - name: Download all artifacts
         uses: actions/download-artifact@v3
         with:
           path: /tmp/artifacts
-      - name: Create tarballs & get timestamp
-        id: tarball_and_timestamp
+      - name: Create tarballs
         run: |
           mkdir -p /tmp/tarballs
           for artifact_dir in /tmp/artifacts/*; do
             artifact_name="${artifact_dir##*/}"
             tar -C "$artifact_dir" -czf "/tmp/tarballs/$artifact_name.tar.gz" .
           done
-          printf 'RELEASE_TIMESTAMP=%s\n' "$(date -u '+%Y-%m-%d %H:%M:%S')" | tee -a "$GITHUB_OUTPUT"
-          printf 'COMMIT_MESSAGE=%s\n' "$(git log -1 --pretty=%B | head -n 1)" | tee -a "$GITHUB_OUTPUT"
       - name: Create release draft
         uses: softprops/action-gh-release@c9b46fe7aad9f02afd89b12450b780f52dacfb2d
         with:
-          # name: "Auto-Package: ${{ steps.tarball_and_timestamp.outputs.RELEASE_TIMESTAMP }} - ${{ steps.tarball_and_timestamp.outputs.COMMIT_MESSAGE }}"
-          generate_release_notes: true
+          name: "Snapshot ${{ steps.jobenv.outputs.RELEASE_TIMESTAMP }} - '${{ steps.jobenv.outputs.COMMIT_MESSAGE }}'"
+          body: |
+            Built commit: '${{ steps.tarball_and_timestamp.outputs.COMMIT_HASH }}'
+            Contents:
+              - release-alpine-akms-apk.tar.gz
+                Module and supporting files as Alpine Linux '.apk' packages
+              - release-alpine-akms-manual.tar.gz
+                Module and supporting files for Alpine Linux for manual installation
+                - Note: `\modprobe.d\it87-oot.conf` should only be installed if 'ignore_resource_conflict' option is needed!
+              - release-debian-dkms-deb.tar.gz
+                Module and supporting files as Debian '.deb' packages
+              - release-redhat-akmods-rpm.tar.gz
+                Module and supporting files as Red Hat '.rpm' packages
+              - release-redhat-akmods-source-rpm.tar.gz
+                Source RPMs (for debugging and inspection)
           draft: true
           prerelease: true
           files: /tmp/tarballs/*
