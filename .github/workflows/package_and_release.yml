@@ -107,3 +107,4 @@ jobs:
           draft: true
           name: Snapshot ${{ steps.jobenv.outputs.RELEASE_TIMESTAMP }} - "${{ steps.jobenv.outputs.COMMIT_MESSAGE }}"
           removeArtifacts: true
+          tag: latest-snapshot
