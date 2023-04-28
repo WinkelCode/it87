@@ -118,7 +118,7 @@ jobs:
                 Source RPMs (for debugging and inspection).
         run: |
           release_text_title="${{ env.RELEASE_TEXT_TITLE }}"
-          release_text_title="${release_text_title//$'\n'}
+          release_text_title="${release_text_title//$'\n'}"
           release_text_body="${{ env.RELEASE_TEXT_BODY }}"
           release_text_body="${release_text_body//$'\n'/'\n'}"
           # {{ env.CURL_BOILERPLATE }} "https://api.github.com/repos/${{ github.repository }}/releases" \
