@@ -101,7 +101,7 @@ jobs:
         env:
           RELEASE_TAG: snapshot-${{ steps.jobenv.outputs.ISO_DATE }}
           RELEASE_TEXT_TITLE: |
-            Snapshot ${{ steps.jobenv.outputs.FULL_TIMESTAMP }} - "${{ steps.jobenv.outputs.COMMIT_MESSAGE }}"
+            Snapshot ${{ steps.jobenv.outputs.FULL_TIMESTAMP }} - \"${{ steps.jobenv.outputs.COMMIT_MESSAGE }}\"
           RELEASE_TEXT_BODY: |
             Packaged commit: \`${{ steps.jobenv.outputs.COMMIT_HASH }}\`
             # Asset contents:
