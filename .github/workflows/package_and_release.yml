@@ -119,6 +119,8 @@ jobs:
         run: |
           # Replace newlines in release text body with a literal '\n'.
           RELEASE_TEXT_BODY="${RELEASE_TEXT_BODY//$'\n'/\\n}"
+          # Remove any newlines in release text title.
+          RELEASE_TEXT_TITLE="${RELEASE_TEXT_TITLE//$'\n'}"
 
           ${{ env.CURL_BOILERPLATE }} "https://api.github.com/repos/${{ github.repository }}/releases" \
             -X POST \
