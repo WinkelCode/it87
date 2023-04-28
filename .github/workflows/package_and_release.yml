@@ -117,13 +117,20 @@ jobs:
               - release-redhat-akmods-source-rpm.tar.gz
                 Source RPMs (for debugging and inspection).
         run: |
-          # Write texts to /tmp
-          printf '%s' "${{ env.RELEASE_TEXT_TITLE }}" > /tmp/release_title
-          printf '%s' "${{ env.RELEASE_TEXT_BODY }}" > /tmp/release_body
+          # Prepare JSON data
+          printf '{
+            "tag_name": "%s",
+            "name": "%s",
+            "body": "%s",
+            "draft": true,
+            "prerelease": true
+          }' \
+            "snapshot-${{ steps.jobenv.outputs.ISO_DATE }}" \
+            "${{ env.RELEASE_TEXT_TITLE }}" \
+            "${{ env.RELEASE_TEXT_BODY }}" \
+            >/tmp/release_data
 
-          # cat
-          cat /tmp/release_title
-          cat /tmp/release_body
+          cat /tmp/release_data
 
           # {{ env.CURL_BOILERPLATE }} "https://api.github.com/repos/${{ github.repository }}/releases" \
           #   -X POST \
@@ -131,7 +138,7 @@ jobs:
           #     {
           #       "tag_name": "snapshot-${{ steps.jobenv.outputs.ISO_DATE }}",
           #       "name": "Testing: 123",
-          #       "body": "${{ env.RELEASE_TEXT_BODY }}",
+          #       "body": "{{ env.RELEASE_TEXT_BODY }}",
           #       "draft": true,
           #       "prerelease": true
           #     }
