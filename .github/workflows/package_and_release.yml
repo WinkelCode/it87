@@ -118,8 +118,8 @@ jobs:
                 Source RPMs (for debugging and inspection).
         run: |
           # Write texts to /tmp
-          printf '%s\n' "${{ env.RELEASE_TEXT_TITLE }}" > /tmp/release_title
-          printf '%s\n' "${{ env.RELEASE_TEXT_BODY }}" > /tmp/release_body
+          printf '%s' "${{ env.RELEASE_TEXT_TITLE }}" > /tmp/release_title
+          printf '%s' "${{ env.RELEASE_TEXT_BODY }}" > /tmp/release_body
 
           # cat
           cat /tmp/release_title
