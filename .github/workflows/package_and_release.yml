@@ -71,7 +71,7 @@ jobs:
           done
       - name: Create new release draft
         run: |
-          ${{ env.CURL_BOILERPLATE }} https://api.github.com/repos/${{ github.repository_owner }}/${{ github.repository }}/releases
+          ${{ env.CURL_BOILERPLATE }} https://api.github.com/repos/${{ github.repository }}/releases
       # - name: Create release draft
       #   uses: ncipollo/release-action@a2e71bdd4e7dab70ca26a852f29600c98b33153e
       #   with:
