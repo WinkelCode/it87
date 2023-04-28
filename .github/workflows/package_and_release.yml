@@ -119,6 +119,7 @@ jobs:
         run: |
           release_text_title="${{ env.RELEASE_TEXT_TITLE }}"
           release_text_body="${{ env.RELEASE_TEXT_BODY }}"
+          release_text_body="${release_text_body//$'\n'/'\n'}"
           echo "Creating release draft with title: $release_text_title"
           echo "Creating release draft with body: $release_text_body"
           # {{ env.CURL_BOILERPLATE }} "https://api.github.com/repos/${{ github.repository }}/releases" \
