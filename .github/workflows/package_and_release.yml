@@ -100,7 +100,7 @@ jobs:
       - name: Create new release draft
         env:
           RELEASE_TAG: snapshot-${{ steps.jobenv.outputs.ISO_DATE }}
-          RELEASE_TEXT_TITLE: Snapshot ${{ steps.jobenv.outputs.FULL_TIMESTAMP }} - "${{ steps.jobenv.outputs.COMMIT_MESSAGE }}"
+          RELEASE_TEXT_TITLE: Snapshot ${{ steps.jobenv.outputs.FULL_TIMESTAMP }} - \"${{ steps.jobenv.outputs.COMMIT_MESSAGE }}\"
           RELEASE_TEXT_BODY: |
             Packaged commit: `${{ steps.jobenv.outputs.COMMIT_HASH }}`
             # Asset contents:
@@ -119,7 +119,7 @@ jobs:
         run: |
           echo "-> Tag: $RELEASE_TAG"
           echo "-> Title: $RELEASE_TEXT_TITLE"
-          # Newlines in the body are replaced by a literal '\n' since the body is a JSON string.
+          # Newlines in the body are replaced by '\n' since the body is a JSON string.
           RELEASE_TEXT_BODY="${RELEASE_TEXT_BODY//$'\n'/'\n'}"
           echo "-> Body: $RELEASE_TEXT_BODY"
           
@@ -134,13 +134,5 @@ jobs:
                 "prerelease": true
               }
           EOF
-
-          printf "{
-                "tag_name": "$RELEASE_TAG",
-                "name": "$RELEASE_TEXT_TITLE",
-                "body": "$RELEASE_TEXT_BODY",
-                "draft": true,
-                "prerelease": true
-          }"
 
           
