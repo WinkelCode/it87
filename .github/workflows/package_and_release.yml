@@ -69,9 +69,6 @@ jobs:
             artifact_name="${artifact_dir##*/}"
             tar -C "$artifact_dir" -czf "/tmp/tarballs/$artifact_name.tar.gz" .
           done
-      - name: Create new release draft
-        run: |
-          ${{ env.CURL_BOILERPLATE }} https://api.github.com/repos/${{ github.repository }}/releases
       # - name: Create release draft
       #   uses: ncipollo/release-action@a2e71bdd4e7dab70ca26a852f29600c98b33153e
       #   with:
@@ -99,5 +96,36 @@ jobs:
       #     # We will update the previous release if it was created on the same day.
       #     tag: snapshot-${{ steps.jobenv.outputs.ISO_DATE }}
       #     allowUpdates: true
-      #     removeArtifacts: true
+      #     removeArtifacts: true                
+      - name: Create new release draft
+        run: |
+          release_text_body="$(cat <<EOF
+          Packaged commit: \`${{ steps.jobenv.outputs.COMMIT_HASH }}\`
+          # Asset contents:
+            - release-alpine-akms-apk.tar.gz
+              Module and supporting files as Alpine Linux '.apk' packages.
+            - release-alpine-akms-manual.tar.gz
+              Module and supporting files for Alpine Linux via manual installation.
+              - Note: \`/etc/modprobe.d/it87-oot.conf\` should only be installed if \`ignore_resource_conflict\` option is needed!
+            - release-debian-dkms-deb.tar.gz
+              Module as Debian '.deb' package.
+              - Note: Currently does not include package for \`ignore_resource_conflict\` option.
+            - release-redhat-akmods-rpm.tar.gz
+              Module and supporting files as Red Hat '.rpm' packages, also works with Fedora Silverblue & co.
+            - release-redhat-akmods-source-rpm.tar.gz
+              Source RPMs (for debugging and inspection).
+          EOF
+          )"
+          ${{ env.CURL_BOILERPLATE }} "https://api.github.com/repos/${{ github.repository }}/releases" \
+            -X POST \
+            -d @- <<-EOF
+              {
+                "tag_name": "snapshot-${{ steps.jobenv.outputs.ISO_DATE }}",
+                "name": "Snapshot ${{ steps.jobenv.outputs.FULL_TIMESTAMP }} - \"${{ steps.jobenv.outputs.COMMIT_MESSAGE }}\"",
+                "body": "${release_text_body}",
+                "draft": true,
+                "prerelease": true
+              }
+            EOF
+
           
