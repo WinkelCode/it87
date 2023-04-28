@@ -5,6 +5,8 @@ on:
   #     - master
   workflow_dispatch:
   push:
+    branches:
+      master
 jobs:
   # build_and_test_apk_testing:
   #   uses: ./.github/workflows/packagetool.yml
