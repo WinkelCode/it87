@@ -6,13 +6,13 @@ on:
   workflow_dispatch:
   push:
 jobs:
-  build_and_test_apk_testing:
-    uses: ./.github/workflows/packagetool.yml
-    with:
-      package_system: 'apk'
-      run_tests: false
-      produce_artifact: true
-      use_build_cache: true
+  # build_and_test_apk_testing:
+  #   uses: ./.github/workflows/packagetool.yml
+  #   with:
+  #     package_system: 'apk'
+  #     run_tests: false
+  #     produce_artifact: true
+  #     use_build_cache: true
   # build_and_test_apk:
   #   uses: ./.github/workflows/packagetool.yml
   #   with:
@@ -36,11 +36,17 @@ jobs:
   #     use_build_cache: true
   prepare_release:
     needs:
-      - build_and_test_apk_testing
+      # - build_and_test_apk_testing
       # - build_and_test_apk
       # - build_and_test_deb
       # - build_and_test_rpm
     runs-on: ubuntu-latest
+    env: 
+      CURL_BOILERPLATE: |
+        curl -L \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28"
     steps:
       - uses: actions/checkout@v3
       - name: Gather variables
@@ -50,43 +56,50 @@ jobs:
           printf 'ISO_DATE=%s\n' "$(date -u '+%Y-%m-%d')" | tee -a "$GITHUB_OUTPUT"
           printf 'COMMIT_MESSAGE=%s\n' "$(git log -1 --pretty=%B | head -n 1)" | tee -a "$GITHUB_OUTPUT"
           printf 'COMMIT_HASH=%s\n' "$(git rev-parse HEAD)" | tee -a "$GITHUB_OUTPUT"
-      - name: Download all artifacts
-        uses: actions/download-artifact@v3
-        with:
-          path: /tmp/artifacts
+      # - name: Download all artifacts
+      #   uses: actions/download-artifact@v3
+      #   with:
+      #     path: /tmp/artifacts
       - name: Create tarballs
         run: |
+          mkdir -p /tmp/artifacts/testing
+          touch /tmp/artifacts/testing/testing.txt
           mkdir -p /tmp/tarballs
           for artifact_dir in /tmp/artifacts/*; do
             artifact_name="${artifact_dir##*/}"
             tar -C "$artifact_dir" -czf "/tmp/tarballs/$artifact_name.tar.gz" .
           done
-      - name: Create release draft
-        uses: ncipollo/release-action@a2e71bdd4e7dab70ca26a852f29600c98b33153e
-        with:
-          name: Snapshot ${{ steps.jobenv.outputs.FULL_TIMESTAMP }} - "${{ steps.jobenv.outputs.COMMIT_MESSAGE }}"
-          draft: true
-          prerelease: true
-          body: |
-            Packaged commit: `${{ steps.jobenv.outputs.COMMIT_HASH }}`
-            # Asset contents:
-              - release-alpine-akms-apk.tar.gz
-                Module and supporting files as Alpine Linux '.apk' packages.
-              - release-alpine-akms-manual.tar.gz
-                Module and supporting files for Alpine Linux via manual installation.
-                - Note: `/etc/modprobe.d/it87-oot.conf` should only be installed if `ignore_resource_conflict` option is needed!
-              - release-debian-dkms-deb.tar.gz
-                Module as Debian '.deb' package.
-                - Note: Currently does not include package for `ignore_resource_conflict` option.
-              - release-redhat-akmods-rpm.tar.gz
-                Module and supporting files as Red Hat '.rpm' packages, also works with Fedora Silverblue & co.
-              - release-redhat-akmods-source-rpm.tar.gz
-                Source RPMs (for debugging and inspection).
-          artifacts: /tmp/tarballs/*
-          artifactContentType: application/gzip
-          artifactErrorsFailBuild: true
-          # We will update the previous release if it was created on the same day.
-          tag: snapshot-${{ steps.jobenv.outputs.ISO_DATE }}
-          allowUpdates: true
-          removeArtifacts: true
+      - name: Create new release draft
+        run: |
+          # https://api.github.com/repos/OWNER/REPO/releases
+          ${{ env.CURL_BOILERPLATE }} \
+            https://api.github.com/repos/${{ github.repository_owner }}/${{ github.repository }}/releases
+      # - name: Create release draft
+      #   uses: ncipollo/release-action@a2e71bdd4e7dab70ca26a852f29600c98b33153e
+      #   with:
+      #     name: Snapshot ${{ steps.jobenv.outputs.FULL_TIMESTAMP }} - "${{ steps.jobenv.outputs.COMMIT_MESSAGE }}"
+      #     draft: true
+      #     prerelease: true
+      #     body: |
+      #       Packaged commit: `${{ steps.jobenv.outputs.COMMIT_HASH }}`
+      #       # Asset contents:
+      #         - release-alpine-akms-apk.tar.gz
+      #           Module and supporting files as Alpine Linux '.apk' packages.
+      #         - release-alpine-akms-manual.tar.gz
+      #           Module and supporting files for Alpine Linux via manual installation.
+      #           - Note: `/etc/modprobe.d/it87-oot.conf` should only be installed if `ignore_resource_conflict` option is needed!
+      #         - release-debian-dkms-deb.tar.gz
+      #           Module as Debian '.deb' package.
+      #           - Note: Currently does not include package for `ignore_resource_conflict` option.
+      #         - release-redhat-akmods-rpm.tar.gz
+      #           Module and supporting files as Red Hat '.rpm' packages, also works with Fedora Silverblue & co.
+      #         - release-redhat-akmods-source-rpm.tar.gz
+      #           Source RPMs (for debugging and inspection).
+      #     artifacts: /tmp/tarballs/*
+      #     artifactContentType: application/gzip
+      #     artifactErrorsFailBuild: true
+      #     # We will update the previous release if it was created on the same day.
+      #     tag: snapshot-${{ steps.jobenv.outputs.ISO_DATE }}
+      #     allowUpdates: true
+      #     removeArtifacts: true
           
