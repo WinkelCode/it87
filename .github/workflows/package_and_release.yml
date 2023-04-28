@@ -128,9 +128,9 @@ jobs:
             -X POST \
             -d @- <<-EOF
               {
-                "tag_name": "$release_tag",
-                "name": "$release_text_title",
-                "body": "$release_text_body",
+                "tag_name": "$RELEASE_TAG",
+                "name": "$RELEASE_TEXT_TITLE",
+                "body": "$RELEASE_TEXT_BODY",
                 "draft": true,
                 "prerelease": true
               }
