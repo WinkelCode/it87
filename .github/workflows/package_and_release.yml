@@ -122,18 +122,16 @@ jobs:
           # Remove any newlines in release text title.
           RELEASE_TEXT_TITLE="${RELEASE_TEXT_TITLE//$'\n'}"
 
-          echo "RELEASE_TEXT_TITLE: $RELEASE_TEXT_TITLE"
-          echo "RELEASE_TEXT_BODY: $RELEASE_TEXT_BODY"
-          # ${{ env.CURL_BOILERPLATE }} "https://api.github.com/repos/${{ github.repository }}/releases" \
-          #   -X POST \
-          #   -d @- <<-EOF
-          #     {
-          #       "tag_name": "snapshot-${{ steps.jobenv.outputs.ISO_DATE }}",
-          #       "name": "${RELEASE_TEXT_TITLE}",
-          #       "body": "${RELEASE_TEXT_BODY}",
-          #       "draft": true,
-          #       "prerelease": true
-          #     }
-          # EOF
+          ${{ env.CURL_BOILERPLATE }} "https://api.github.com/repos/${{ github.repository }}/releases" \
+            -X POST \
+            -d @- <<-EOF
+              {
+                "tag_name": "snapshot-${{ steps.jobenv.outputs.ISO_DATE }}",
+                "name": "Testing: 123",
+                "body": "${{ env.RELEASE_TEXT_BODY }}",
+                "draft": true,
+                "prerelease": true
+              }
+          EOF
 
           
