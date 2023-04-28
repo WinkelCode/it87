@@ -99,6 +99,7 @@ jobs:
       #     removeArtifacts: true                
       - name: Create new release draft
         env:
+          RELEASE_TAG: snapshot-${{ steps.jobenv.outputs.ISO_DATE }}
           RELEASE_TEXT_TITLE: |
             Snapshot ${{ steps.jobenv.outputs.FULL_TIMESTAMP }} - \"${{ steps.jobenv.outputs.COMMIT_MESSAGE }}\"
           RELEASE_TEXT_BODY: |
@@ -117,19 +118,18 @@ jobs:
               - release-redhat-akmods-source-rpm.tar.gz
                 Source RPMs (for debugging and inspection).
         run: |
-          release_text_title="${{ env.RELEASE_TEXT_TITLE }}"
-          release_text_title="${release_text_title//$'\n'}"
-          release_text_body="${{ env.RELEASE_TEXT_BODY }}"
-          release_text_body="${release_text_body//$'\n'/'\n'}"
-          echo "Title: $release_text_title"
-          echo "Body: $release_text_body"
+          # We replace newlines with '\n' for the body since it ends up in a JSON string
+          RELEASE_TEXT_BODY="${RELEASE_TEXT_BODY//$'\n'/'\n'}"
+          echo "-> Tag: $RELEASE_TAG"
+          echo "-> Title: $RELEASE_TEXT_TITLE"
+          echo "-> Body: $RELEASE_TEXT_BODY"
           # {{ env.CURL_BOILERPLATE }} "https://api.github.com/repos/${{ github.repository }}/releases" \
           #   -X POST \
           #   -d @- <<-EOF
           #     {
-          #       "tag_name": "snapshot-${{ steps.jobenv.outputs.ISO_DATE }}",
-          #       "name": "Testing: 123",
-          #       "body": "{{ env.RELEASE_TEXT_BODY }}",
+          #       "tag_name": "$release_tag",
+          #       "name": "$release_text_title",
+          #       "body": "$release_text_body",
           #       "draft": true,
           #       "prerelease": true
           #     }
