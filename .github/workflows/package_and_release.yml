@@ -46,7 +46,7 @@ jobs:
         curl -L \
           -H "Accept: application/vnd.github+json" \
           -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-          -H "X-GitHub-Api-Version: 2022-11-28"
+          -H "X-GitHub-Api-Version: 2022-11-28" \
     steps:
       - uses: actions/checkout@v3
       - name: Gather variables
@@ -71,9 +71,7 @@ jobs:
           done
       - name: Create new release draft
         run: |
-          # https://api.github.com/repos/OWNER/REPO/releases
-          ${{ env.CURL_BOILERPLATE }} \
-            https://api.github.com/repos/${{ github.repository_owner }}/${{ github.repository }}/releases
+          ${{ env.CURL_BOILERPLATE }} https://api.github.com/repos/${{ github.repository_owner }}/${{ github.repository }}/releases
       # - name: Create release draft
       #   uses: ncipollo/release-action@a2e71bdd4e7dab70ca26a852f29600c98b33153e
       #   with:
