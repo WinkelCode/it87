@@ -101,18 +101,18 @@ jobs:
         env:
           RELEASE_TAG: snapshot-${{ steps.jobenv.outputs.ISO_DATE }}
           RELEASE_TEXT_TITLE: |
-            Snapshot ${{ steps.jobenv.outputs.FULL_TIMESTAMP }} - \"${{ steps.jobenv.outputs.COMMIT_MESSAGE }}\"
+            Snapshot ${{ steps.jobenv.outputs.FULL_TIMESTAMP }} - "${{ steps.jobenv.outputs.COMMIT_MESSAGE }}"
           RELEASE_TEXT_BODY: |
-            Packaged commit: \`${{ steps.jobenv.outputs.COMMIT_HASH }}\`
+            Packaged commit: `${{ steps.jobenv.outputs.COMMIT_HASH }}`
             # Asset contents:
               - release-alpine-akms-apk.tar.gz
                 Module and supporting files as Alpine Linux '.apk' packages.
               - release-alpine-akms-manual.tar.gz
                 Module and supporting files for Alpine Linux via manual installation.
-                - Note: \`/etc/modprobe.d/it87-oot.conf\` should only be installed if \`ignore_resource_conflict\` option is needed!
+                - Note: `/etc/modprobe.d/it87-oot.conf` should only be installed if `ignore_resource_conflict` option is needed!
               - release-debian-dkms-deb.tar.gz
                 Module as Debian '.deb' package.
-                - Note: Currently does not include package for \`ignore_resource_conflict\` option.
+                - Note: Currently does not include package for `ignore_resource_conflict` option.
               - release-redhat-akmods-rpm.tar.gz
                 Module and supporting files as Red Hat '.rpm' packages, also works with Fedora Silverblue & co.
               - release-redhat-akmods-source-rpm.tar.gz
