@@ -125,7 +125,7 @@ jobs:
           cat /tmp/release_title
           cat /tmp/release_body
 
-          # ${{ env.CURL_BOILERPLATE }} "https://api.github.com/repos/${{ github.repository }}/releases" \
+          # {{ env.CURL_BOILERPLATE }} "https://api.github.com/repos/${{ github.repository }}/releases" \
           #   -X POST \
           #   -d @- <<-EOF
           #     {
