@@ -135,4 +135,12 @@ jobs:
               }
           EOF
 
+          printf '{
+                "tag_name": "$RELEASE_TAG",
+                "name": "$RELEASE_TEXT_TITLE",
+                "body": "$RELEASE_TEXT_BODY",
+                "draft": true,
+                "prerelease": true
+              }'
+
           
