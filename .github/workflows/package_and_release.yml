@@ -98,34 +98,39 @@ jobs:
       #     allowUpdates: true
       #     removeArtifacts: true                
       - name: Create new release draft
+        env:
+          RELEASE_TEXT_BODY: |
+            Packaged commit: \`${{ steps.jobenv.outputs.COMMIT_HASH }}\`
+            # Asset contents:
+              - release-alpine-akms-apk.tar.gz
+                Module and supporting files as Alpine Linux '.apk' packages.
+              - release-alpine-akms-manual.tar.gz
+                Module and supporting files for Alpine Linux via manual installation.
+                - Note: \`/etc/modprobe.d/it87-oot.conf\` should only be installed if \`ignore_resource_conflict\` option is needed!
+              - release-debian-dkms-deb.tar.gz
+                Module as Debian '.deb' package.
+                - Note: Currently does not include package for \`ignore_resource_conflict\` option.
+              - release-redhat-akmods-rpm.tar.gz
+                Module and supporting files as Red Hat '.rpm' packages, also works with Fedora Silverblue & co.
+              - release-redhat-akmods-source-rpm.tar.gz
+                Source RPMs (for debugging and inspection).
         run: |
-          release_text_body="$(cat <<EOF
-          Packaged commit: \`${{ steps.jobenv.outputs.COMMIT_HASH }}\`
-          # Asset contents:
-            - release-alpine-akms-apk.tar.gz
-              Module and supporting files as Alpine Linux '.apk' packages.
-            - release-alpine-akms-manual.tar.gz
-              Module and supporting files for Alpine Linux via manual installation.
-              - Note: \`/etc/modprobe.d/it87-oot.conf\` should only be installed if \`ignore_resource_conflict\` option is needed!
-            - release-debian-dkms-deb.tar.gz
-              Module as Debian '.deb' package.
-              - Note: Currently does not include package for \`ignore_resource_conflict\` option.
-            - release-redhat-akmods-rpm.tar.gz
-              Module and supporting files as Red Hat '.rpm' packages, also works with Fedora Silverblue & co.
-            - release-redhat-akmods-source-rpm.tar.gz
-              Source RPMs (for debugging and inspection).
-          EOF
-          )"
-          ${{ env.CURL_BOILERPLATE }} "https://api.github.com/repos/${{ github.repository }}/releases" \
-            -X POST \
-            -d @- <<-EOF
-              {
-                "tag_name": "snapshot-${{ steps.jobenv.outputs.ISO_DATE }}",
-                "name": "Snapshot ${{ steps.jobenv.outputs.FULL_TIMESTAMP }} - \"${{ steps.jobenv.outputs.COMMIT_MESSAGE }}\"",
-                "body": "ABC\n\n\n\n\n${release_text_body}",
-                "draft": true,
-                "prerelease": true
-              }
-          EOF
+          echo "${{ env.RELEASE_TEXT_BODY }}"
+          echo "$RELEASE_TEXT_BODY"
+          # Replace newlines in release text body with a literal '\n'.
+          RELEASE_TEXT_BODY="${RELEASE_TEXT_BODY//$'\n'/\\n}"
+          echo "$RELEASE_TEXT_BODY"
+
+          # ${{ env.CURL_BOILERPLATE }} "https://api.github.com/repos/${{ github.repository }}/releases" \
+          #   -X POST \
+          #   -d @- <<-EOF
+          #     {
+          #       "tag_name": "snapshot-${{ steps.jobenv.outputs.ISO_DATE }}",
+          #       "name": "Snapshot ${{ steps.jobenv.outputs.FULL_TIMESTAMP }} - \"${{ steps.jobenv.outputs.COMMIT_MESSAGE }}\"",
+          #       "body": "ABC\n\n\n\n\n${release_text_body}",
+          #       "draft": true,
+          #       "prerelease": true
+          #     }
+          # EOF
 
           
