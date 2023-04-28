@@ -121,8 +121,8 @@ jobs:
             -X POST \
             -d @- <<-EOF
               {
-                "tag_name": "snapshot-${{ steps.jobenv.outputs.ISO_DATE }}",
-                "name": "Snapshot ${{ steps.jobenv.outputs.FULL_TIMESTAMP }} - \"${{ steps.jobenv.outputs.COMMIT_MESSAGE }}\"",
+                "tag_name": "123",
+                "name": "345",
                 "body": "Test",
                 "draft": true,
                 "prerelease": true
