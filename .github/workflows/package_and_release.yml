@@ -35,7 +35,7 @@ jobs:
   #     produce_artifact: true
   #     use_build_cache: true
   prepare_release:
-    needs:
+    # needs:
       # - build_and_test_apk_testing
       # - build_and_test_apk
       # - build_and_test_deb
