@@ -118,21 +118,22 @@ jobs:
               - release-redhat-akmods-source-rpm.tar.gz
                 Source RPMs (for debugging and inspection).
         run: |
-          # We replace newlines with '\n' for the body since it ends up in a JSON string
-          RELEASE_TEXT_BODY="${RELEASE_TEXT_BODY//$'\n'/'\n'}"
           echo "-> Tag: $RELEASE_TAG"
           echo "-> Title: $RELEASE_TEXT_TITLE"
+          # Newlines in the body are replaced by a literal '\n' since the body is a JSON string.
+          RELEASE_TEXT_BODY="${RELEASE_TEXT_BODY//$'\n'/'\n'}"
           echo "-> Body: $RELEASE_TEXT_BODY"
-          # {{ env.CURL_BOILERPLATE }} "https://api.github.com/repos/${{ github.repository }}/releases" \
-          #   -X POST \
-          #   -d @- <<-EOF
-          #     {
-          #       "tag_name": "$release_tag",
-          #       "name": "$release_text_title",
-          #       "body": "$release_text_body",
-          #       "draft": true,
-          #       "prerelease": true
-          #     }
-          # EOF
+          
+          ${{ env.CURL_BOILERPLATE }} "https://api.github.com/repos/${{ github.repository }}/releases" \
+            -X POST \
+            -d @- <<-EOF
+              {
+                "tag_name": "$release_tag",
+                "name": "$release_text_title",
+                "body": "$release_text_body",
+                "draft": true,
+                "prerelease": true
+              }
+          EOF
 
           
