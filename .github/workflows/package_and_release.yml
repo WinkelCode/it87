@@ -99,6 +99,8 @@ jobs:
       #     removeArtifacts: true                
       - name: Create new release draft
         env:
+          RELEASE_TEXT_TITLE: |
+            Snapshot ${{ steps.jobenv.outputs.FULL_TIMESTAMP }} - "${{ steps.jobenv.outputs.COMMIT_MESSAGE }}"
           RELEASE_TEXT_BODY: |
             Packaged commit: \`${{ steps.jobenv.outputs.COMMIT_HASH }}\`
             # Asset contents:
@@ -115,22 +117,19 @@ jobs:
               - release-redhat-akmods-source-rpm.tar.gz
                 Source RPMs (for debugging and inspection).
         run: |
-          echo "${{ env.RELEASE_TEXT_BODY }}"
-          echo "$RELEASE_TEXT_BODY"
           # Replace newlines in release text body with a literal '\n'.
           RELEASE_TEXT_BODY="${RELEASE_TEXT_BODY//$'\n'/\\n}"
-          echo "$RELEASE_TEXT_BODY"
 
-          # ${{ env.CURL_BOILERPLATE }} "https://api.github.com/repos/${{ github.repository }}/releases" \
-          #   -X POST \
-          #   -d @- <<-EOF
-          #     {
-          #       "tag_name": "snapshot-${{ steps.jobenv.outputs.ISO_DATE }}",
-          #       "name": "Snapshot ${{ steps.jobenv.outputs.FULL_TIMESTAMP }} - \"${{ steps.jobenv.outputs.COMMIT_MESSAGE }}\"",
-          #       "body": "ABC\n\n\n\n\n${release_text_body}",
-          #       "draft": true,
-          #       "prerelease": true
-          #     }
-          # EOF
+          ${{ env.CURL_BOILERPLATE }} "https://api.github.com/repos/${{ github.repository }}/releases" \
+            -X POST \
+            -d @- <<-EOF
+              {
+                "tag_name": "snapshot-${{ steps.jobenv.outputs.ISO_DATE }}",
+                "name": "${RELEASE_TEXT_TITLE}",
+                "body": "${RELEASE_TEXT_BODY}",
+                "draft": true,
+                "prerelease": true
+              }
+          EOF
 
           
