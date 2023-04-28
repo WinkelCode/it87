@@ -116,13 +116,14 @@ jobs:
               Source RPMs (for debugging and inspection).
           EOF
           )"
+
           ${{ env.CURL_BOILERPLATE }} "https://api.github.com/repos/${{ github.repository }}/releases" \
             -X POST \
             -d @- <<-EOF
               {
                 "tag_name": "snapshot-${{ steps.jobenv.outputs.ISO_DATE }}",
                 "name": "Snapshot ${{ steps.jobenv.outputs.FULL_TIMESTAMP }} - \"${{ steps.jobenv.outputs.COMMIT_MESSAGE }}\"",
-                "body": "${release_text_body}",
+                "body": "Test",
                 "draft": true,
                 "prerelease": true
               }
