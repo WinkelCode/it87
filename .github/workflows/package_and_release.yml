@@ -95,7 +95,7 @@ jobs:
           if [ "$latest_release_is_draft" == 'true' ]; then
             printf '%s\n' "-> Latest release is a draft, replacing it."
             latest_release_id="$(printf '%s\n' "$latest_release" | jq -r '.[0].id')"
-            # Delete the draft release (shortcut to remove old assets too)
+            # Delete the previous draft to ensure we don't keep outdated information or assets.
             ${{ env.CURL_BOILERPLATE }} "https://api.github.com/repos/${{ github.repository }}/releases/$latest_release_id" -X DELETE
             # Create a new release
             api_response="$(
