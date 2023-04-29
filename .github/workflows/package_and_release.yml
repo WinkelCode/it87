@@ -1,4 +1,4 @@
-name: 'Auto test, package and draft release'
+name: 'Test, package and draft release'
 on:
   workflow_dispatch:
   push:
