@@ -53,7 +53,7 @@ jobs:
           mkdir -p /tmp/tarballs
           for artifact_dir in /tmp/artifacts/*; do
             artifact_name="${artifact_dir##*/}"
-            tar -C "$artifact_dir" -czf "/tmp/tarballs/$artifact_name.tar.gz" .
+            tar -C "$artifact_dir" -czvf "/tmp/tarballs/$artifact_name.tar.gz" .
           done
       - name: Create release draft
         id: create_release
