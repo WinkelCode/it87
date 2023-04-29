@@ -41,7 +41,7 @@ jobs:
         id: jobenv
         run: |
           printf 'FULL_TIMESTAMP=%s\n' "$(date -u '+%Y-%m-%d %H:%M:%S')" | tee -a "$GITHUB_OUTPUT"
-          printf 'ISO_DATE=%s\n' "$(date -u '+%Y%m%dT%H%M%SZ')" | tee -a "$GITHUB_OUTPUT"
+          printf 'ISO_DATE=%s\n' "$(date -u '+%Y-%m-%dT%H%M%SZ')" | tee -a "$GITHUB_OUTPUT"
           printf 'COMMIT_MESSAGE=%s\n' "$(git log -1 --pretty=%B | head -n 1)" | tee -a "$GITHUB_OUTPUT"
           printf 'COMMIT_HASH=%s\n' "$(git rev-parse HEAD)" | tee -a "$GITHUB_OUTPUT"
       - name: Download all artifacts
